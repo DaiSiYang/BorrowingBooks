@@ -106,6 +106,7 @@ const logout = () => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   
   .header-left {
+    margin-left: 20px;
     display: flex;
     align-items: center;
     
@@ -146,7 +147,7 @@ const logout = () => {
         display: flex;
         align-items: center;
         cursor: pointer;
-        
+
         .username {
           margin: 0 8px;
           color: #183550;

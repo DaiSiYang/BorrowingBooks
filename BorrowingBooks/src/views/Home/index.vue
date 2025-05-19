@@ -32,7 +32,7 @@ onMounted(() => {
           <Header />
         </el-header>
         <el-main class="main-content">
-          <Main />
+          <router-view />
         </el-main>
         <el-footer height="40px" class="footer-container">
           <div class="footer-content">
