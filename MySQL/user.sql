@@ -3,10 +3,11 @@
 -- ----------------------------
 CREATE TABLE `user` (
                         `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '用户ID',
-                        `username` varchar(50) NOT NULL COMMENT '用户名',
+                        `username` varchar(50) NOT NULL UNIQUE COMMENT '用户名',
                         `password` varchar(100) NOT NULL COMMENT '密码(加密存储)',
                         `real_name` varchar(50) DEFAULT NULL COMMENT '真实姓名',
                         `phone` char(11) DEFAULT NULL COMMENT '手机号',
+                        `avatar_url` TEXT DEFAULT NULL COMMENT '头像URL',
                         `email` varchar(50) DEFAULT NULL COMMENT '邮箱',
                         `role_id` int(11) NOT NULL DEFAULT 2 COMMENT '角色ID(1-管理员,2-普通用户)',
                         `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '用户状态(1-正常,0-禁用,2-锁定)',
