@@ -37,6 +37,10 @@ const handleLogin = () => {
         type: 'success',
         duration: 3000
       })
+      setTimeout(() => {
+        // 登录成功后跳转到首页
+        router.push({name: 'home'})
+      }, 2000)
     } else {
       ElNotification({
         title: '登录失败',

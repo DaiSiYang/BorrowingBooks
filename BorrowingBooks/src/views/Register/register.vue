@@ -2,6 +2,7 @@
 import Backdrop from "@/components/Backdrop.vue";
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import {ElNotification} from "element-plus";
 
 const router = useRouter()
 
@@ -49,9 +50,21 @@ const handleRegister = () => {
     if (valid) {
       // 注册逻辑
       console.log('注册成功', registerForm)
+      ElNotification({
+        title: '注册成功',
+        message: '请登录',
+        type: 'success',
+        duration: 3000
+      })
       // 注册成功后跳转到登录页
        router.push({name: 'login'})
     } else {
+      ElNotification({
+        title: '注册失败',
+        message: '请检查输入的用户名、密码和邮箱',
+        type: 'error',
+        duration: 3000
+      })
       return false
     }
   })

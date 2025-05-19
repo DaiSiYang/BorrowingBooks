@@ -28,10 +28,14 @@ const router = createRouter({
       name: 'notFound',
       component: () => import('@/views/Wrong/ErrorPage.vue')
     },
-    // 捕获所有未匹配的路由，重定向到404页面
     {
       path: '/:pathMatch(.*)*',
       redirect: { name: 'notFound' }
+    },
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('@/views/Home/index.vue')
     }
   ],
 })

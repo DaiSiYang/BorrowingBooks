@@ -2,6 +2,7 @@
 import Backdrop from "@/components/Backdrop.vue";
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import {ElNotification} from "element-plus";
 
 const router = useRouter()
 
@@ -72,9 +73,21 @@ const handleReset = () => {
     if (valid) {
       // 重置密码逻辑
       console.log('重置密码成功', resetForm)
+      ElNotification({
+        title: '重置成功',
+        message: '请登录',
+        type: 'success',
+        duration: 3000
+      })
       // 重置成功后跳转到登录页
      router.push({name: 'login'})
     } else {
+      ElNotification({
+        title: '重置失败',
+        message: '请检查输入的邮箱、验证码和密码',
+        type: 'error',
+        duration: 3000
+      })
       return false
     }
   })
@@ -273,13 +286,13 @@ const goToLogin = () => {
         gap: 10px;
         
         .verification-input {
-          width: 267px;
+          width: 230px;
           flex: 1;
         }
         
         .send-code-button {
           margin-top: 1px;
-          width: 120px;
+          width: 100px;
           height: 46px;
           background: linear-gradient(135deg, #68b8d7 0%, #183550 100%);
           border: none;
