@@ -90,5 +90,5 @@ public class Book implements Serializable {
      */
     private LocalDateTime updateTime;
 
-
+    private String coverImage;
 }
