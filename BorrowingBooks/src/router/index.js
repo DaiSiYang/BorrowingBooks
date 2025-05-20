@@ -87,6 +87,16 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/Home/components/HomePage.vue')
+        },
+        // 添加个人中心路由
+        {
+          path: '/user/personal-center',
+          name: 'personalCenter',
+          component: () => import('../views/User/PersonalCenter.vue'),
+          meta: {
+            requiresAuth: true,
+            title: '个人中心'
+          }
         }
       ]
     }

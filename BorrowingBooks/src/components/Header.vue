@@ -37,7 +37,7 @@
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item>
+              <el-dropdown-item @click="goToPersonalCenter">
                 <el-icon><User /></el-icon>个人中心
               </el-dropdown-item>
               <el-dropdown-item>
@@ -83,9 +83,15 @@ const isSidebarCollapsed = ref(false)
 const isCollapsed = inject('isSidebarCollapsed')
 const toggleSidebar = inject('toggleSidebar')
 
+// 跳转到个人中心
+const goToPersonalCenter = () => {
+  router.push('/user/personal-center')
+}
+
 const handleToggleSidebar = () => {
   console.log('点击了logo，准备切换侧边栏状态')
-  toggleSidebar()}
+  toggleSidebar()
+  }
 
 const logout = () => {
   // 退出登录逻辑
