@@ -8,12 +8,6 @@
       >
         <el-icon><Fold v-if="!isCollapsed" /><Expand v-else /></el-icon>
       </el-button>
-      <div class="breadcrumb">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ currentPage }}</el-breadcrumb-item>
-        </el-breadcrumb>
-      </div>
     </div>
     
     <div class="header-right">
@@ -37,8 +31,8 @@
         
         <el-dropdown trigger="click">
           <div class="user-info">
-            <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
-            <span class="username">管理员</span>
+            <el-avatar :size="32" :src= userAvatar />
+            <span class="username">{{username || '未登录'}}</span>
             <el-icon><ArrowDown /></el-icon>
           </div>
           <template #dropdown>
@@ -61,6 +55,7 @@
 </template>
 
 <script lang="ts" setup>
+import {useUserInfoStore} from "@/stores/userInfo.js";
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -76,6 +71,9 @@ import {
 
 import { inject } from 'vue'
 
+const userInfoStore = useUserInfoStore()
+const username = ref(userInfoStore.userInfo.username || '未登录')
+const userAvatar = ref(userInfoStore.userInfo.avatarUrl)
 const router = useRouter()
 const searchText = ref('')
 const currentPage = ref('图书管理')
@@ -86,8 +84,8 @@ const isCollapsed = inject('isSidebarCollapsed')
 const toggleSidebar = inject('toggleSidebar')
 
 const handleToggleSidebar = () => {
-  toggleSidebar()
-}
+  console.log('点击了logo，准备切换侧边栏状态')
+  toggleSidebar()}
 
 const logout = () => {
   // 退出登录逻辑

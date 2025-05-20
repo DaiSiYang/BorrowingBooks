@@ -22,7 +22,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-container">
+  <el-container class="home-container">
     <el-container class="main-container">
       <el-aside :width="isSidebarCollapsed ? '64px' : '220px'" class="aside-container">
         <Aside />
@@ -41,53 +41,58 @@ onMounted(() => {
         </el-footer>
       </el-container>
     </el-container>
-  </div>
+  </el-container>
 </template>
 
 <style scoped lang="scss">
 .home-container {
   height: 100vh;
-  width: 100vw;
   overflow: hidden;
+}
+
+.main-container {
+  height: 100%;
+}
+
+.aside-container {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.content-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-container {
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  background-color: #f5f7fa;
+}
+
+.footer-container {
+  padding: 0;
+  background-color: #fff;
+  border-top: 1px solid #e6e6e6;
   
-  .main-container {
+  .footer-content {
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
-    .aside-container {
-      transition: width 0.3s;
-      overflow: hidden;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      z-index: 10;
-    }
-    
-    .content-container {
-      .header-container {
-        padding: 0;
-      }
-      
-      .main-content {
-        padding: 0;
-        overflow: hidden;
-      }
-      
-      .footer-container {
-        background-color: #fff;
-        border-top: 1px solid #e6e6e6;
-        padding: 0;
-        
-        .footer-content {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100%;
-          
-          p {
-            margin: 0;
-            font-size: 12px;
-            color: #909399;
-          }
-        }
-      }
+    p {
+      margin: 0;
+      color: #909399;
+      font-size: 12px;
     }
   }
 }

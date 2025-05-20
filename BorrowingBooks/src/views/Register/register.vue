@@ -3,6 +3,7 @@ import Backdrop from "@/components/Backdrop.vue";
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {ElNotification} from "element-plus";
+import {RegisterAPI} from "@/api/Login.js";
 
 const router = useRouter()
 
@@ -43,32 +44,39 @@ const registerRules = {
 
 const registerFormRef = ref(null)
 
-const handleRegister = () => {
-  if (!registerFormRef.value) return
-  
-  registerFormRef.value.validate((valid) => {
-    if (valid) {
+const handleRegister = async () => {
+  if (!registerFormRef.value) return;
+
+  try {
+    const valid = await registerFormRef.value.validate(); // ✅ Promise 写法
+    if (!valid) {
+       new Error('表单校验失败');
+    }
+    const result = await RegisterAPI(registerForm)
+    console.log(result)
+    if (result.code === 200){
       // 注册逻辑
-      console.log('注册成功', registerForm)
+      console.log('注册成功', registerForm);
       ElNotification({
         title: '注册成功',
         message: '请登录',
         type: 'success',
         duration: 3000
-      })
+      });
+
       // 注册成功后跳转到登录页
-       router.push({name: 'login'})
-    } else {
-      ElNotification({
-        title: '注册失败',
-        message: '请检查输入的用户名、密码和邮箱',
-        type: 'error',
-        duration: 3000
-      })
-      return false
+      await router.push({name: 'login'});
     }
-  })
-}
+  } catch (err) {
+    // 表单校验失败
+    ElNotification({
+      title: '注册失败',
+      message: '请检查输入的用户名、密码和邮箱',
+      type: 'error',
+      duration: 3000
+    });
+  }
+};
 
 const goToLogin = () => {
   console.log('返回登录页面')

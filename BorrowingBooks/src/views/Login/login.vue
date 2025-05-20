@@ -3,12 +3,15 @@ import Backdrop from "@/components/Backdrop.vue";
 import { reactive, ref } from 'vue'
 import {useRouter} from "vue-router";
 import {ElNotification} from "element-plus";
+import {LoginAPI} from "@/api/Login.js";
+import {useTokenStore} from "@/stores/tokenStore.js";
+import {useUserInfoStore} from "@/stores/userInfo.js";
 
 const router = useRouter()
 
 const loginForm = reactive({
-  username: '',
-  password: ''
+  username: 'admin',
+  password: '123456'
 })
 
 const loginRules = {
@@ -24,33 +27,53 @@ const loginRules = {
 
 const loginFormRef = ref(null)
 
-const handleLogin = () => {
-  if (!loginFormRef.value) return
-  
-  loginFormRef.value.validate((valid) => {
-    if (valid) {
-      // 登录逻辑
-      console.log('登录成功', loginForm)
-      ElNotification({
-        title: '登录成功',
-        message: '欢迎回来！',
-        type: 'success',
-        duration: 3000
-      })
-      setTimeout(() => {
-        // 登录成功后跳转到首页
-        router.push({name: 'home'})
-      }, 2000)
-    } else {
-      ElNotification({
-        title: '登录失败',
-        message: '请检查输入的用户名和密码',
-        type: 'error',
-        duration: 3000
-      })
-      return false
+const validateForm = () => {
+  return new Promise((resolve) => {
+    if (!loginFormRef.value) {
+      resolve(false)
+      return
     }
+    loginFormRef.value.validate((valid) => {
+      resolve(valid)
+    })
   })
+}
+const tokenStore = useTokenStore()
+const userInfoStore = useUserInfoStore()
+
+const handleLogin = async () => {
+  const valid = await validateForm()
+  if (!valid) {
+    tokenStore.clearToken()
+    ElNotification({
+      title: '登录失败',
+      message: '请检查输入的用户名和密码',
+      type: 'error',
+      duration: 3000
+    })
+    return false
+  }
+  const result = await LoginAPI(loginForm)
+  if (result.code === 200){
+    // 登录逻辑
+    console.log(result)
+    tokenStore.setToken(result.data.token)
+    userInfoStore.setUserInfo(result.data)
+    console.log(tokenStore.getToken)
+    console.log(userInfoStore.getUserInfo())
+    console.log('登录成功', loginForm)
+    ElNotification({
+      title: '登录成功',
+      message: '欢迎回来！',
+      type: 'success',
+      duration: 3000
+    })
+
+    setTimeout(() => {
+      router.push({ name: 'home' })
+    }, 1000)
+  }
+
 }
 
 // 注册和找回密码的处理函数

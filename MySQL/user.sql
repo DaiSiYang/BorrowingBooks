@@ -2,7 +2,7 @@
 -- 用户表结构（添加状态和逻辑删除字段）
 -- ----------------------------
 CREATE TABLE `user` (
-                        `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+                        `id` BIGINT NOT NULL COMMENT '用户ID(雪花算法)',
                         `username` varchar(50) NOT NULL UNIQUE COMMENT '用户名',
                         `password` varchar(100) NOT NULL COMMENT '密码(加密存储)',
                         `real_name` varchar(50) DEFAULT NULL COMMENT '真实姓名',
@@ -43,6 +43,7 @@ CREATE TABLE `book` (
                         `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '图书ID',
                         `title` varchar(100) NOT NULL COMMENT '书名',
                         `author` varchar(100) NOT NULL COMMENT '作者',
+                        `cover_image` varchar(255) DEFAULT NULL COMMENT '封面图片URL',
                         `publisher` varchar(100) DEFAULT NULL COMMENT '出版社',
                         `publish_date` date DEFAULT NULL COMMENT '出版日期',
                         `isbn` varchar(20) DEFAULT NULL COMMENT 'ISBN号',
@@ -85,17 +86,24 @@ CREATE TABLE `borrow_record` (
 -- ----------------------------
 CREATE TABLE `book_category` (
                                  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '分类ID',
-                                 `parent_id` int(11) DEFAULT NULL COMMENT '父分类ID',
                                  `category_name` varchar(50) NOT NULL COMMENT '分类名称',
                                  `description` varchar(100) DEFAULT NULL COMMENT '分类描述',
                                  `is_deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除(0-未删除,1-已删除)',
                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                  PRIMARY KEY (`id`),
-                                 KEY `idx_parent_id` (`parent_id`),
+
                                  KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书分类表';
 
+INSERT INTO book_category
+( category_name, description) VALUES
+                                            ('文学', '文学作品分类'),
+                                            ('小说', '虚构类文学作品'),
+                                            ( '散文', '散文随笔类作品'),
+                                            ( '科技', '科学技术类书籍'),
+                                            ('计算机', '计算机科学相关书籍'),
+                                            ( '物理学', '物理学科普与专业书籍');
 -- ----------------------------
 -- 插入默认权限数据
 -- ----------------------------

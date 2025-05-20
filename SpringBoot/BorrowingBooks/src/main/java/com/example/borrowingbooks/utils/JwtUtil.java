@@ -96,7 +96,7 @@ public class JwtUtil {
      */
     public String extractUserId(String token) {
         return extractClaim(token, claims -> {
-            Object id = claims.get("id");
+            Object id = claims.get("field");
             return id != null ? id.toString() : null;
         });
     }

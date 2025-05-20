@@ -281,6 +281,8 @@ const resetForm = () => {
 <style scoped lang="scss">
 .add-book-container {
   padding: 20px;
+  height: 100%;
+  overflow-y: auto;
   
   .page-header {
     display: flex;

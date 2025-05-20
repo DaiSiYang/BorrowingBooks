@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import {ElMessageBox, ElMessage, ElNotification} from 'element-plus'
+import {BookCategoryAPI} from "@/api/Book.js";
 
 // 分类数据
 const categoryData = ref([])
@@ -35,52 +36,24 @@ const rules = {
 const formRef = ref(null)
 
 // 获取分类数据
-const fetchCategories = () => {
+const fetchCategories =async () => {
   loading.value = true
-  
-  // 模拟API请求延迟
-  setTimeout(() => {
-    // 模拟数据
-    categoryData.value = [
-      {
-        id: 1,
-        name: '文学小说',
-        description: '包括各类文学作品、小说、散文、诗歌等',
-        bookCount: 156,
-        createdAt: '2023-01-15'
-      },
-      {
-        id: 2,
-        name: '科幻小说',
-        description: '科学幻想类小说，探索未来世界和科技发展',
-        bookCount: 89,
-        createdAt: '2023-01-15'
-      },
-      {
-        id: 3,
-        name: '历史传记',
-        description: '历史著作和名人传记',
-        bookCount: 67,
-        createdAt: '2023-01-16'
-      },
-      {
-        id: 4,
-        name: '经济管理',
-        description: '经济学、管理学、商业类书籍',
-        bookCount: 45,
-        createdAt: '2023-01-17'
-      },
-      {
-        id: 5,
-        name: '科学技术',
-        description: '自然科学、工程技术类书籍',
-        bookCount: 78,
-        createdAt: '2023-01-18'
-      }
-    ]
-    
+  const result = await BookCategoryAPI()
+  if (result && result.code === 200) {
+    console.log(result)
+    categoryData.value = result.data.map(item => ({
+      ...item,
+      createdAt: item.createTime.split('T')[0] // 格式化日期
+    }))
     loading.value = false
-  }, 500)
+  } else {
+    loading.value = false
+    ElNotification({
+      title: '错误',
+      message: '获取分类数据失败',
+      type: 'error'
+    })
+  }
 }
 
 // 打开添加分类对话框
@@ -231,7 +204,6 @@ onMounted(() => {
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="分类名称" min-width="150" />
         <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip />
-        <el-table-column prop="bookCount" label="图书数量" width="120" align="center" />
         <el-table-column label="创建日期" width="120">
           <template #default="scope">
             {{ formatDate(scope.row.createdAt) }}

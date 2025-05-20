@@ -125,8 +125,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                 .build();
         String TokenKey = String.format(TOKEN, id);
         String  UserInfoKey = String.format(INFO, id);
-        boolean set = redisUtil.set(TokenKey, token, USER_INFO);
-        boolean json = redisUtil.setJson(UserInfoKey, loginUser, USER_INFO);
+        boolean set = redisUtil.set(TokenKey, token, 30);
+        boolean json = redisUtil.setJson(UserInfoKey, loginUser, 30);
         if (!set || !json){
             log.error("Redis 写入失败，TokenKey: {}, UserInfoKey: {}", TokenKey, UserInfoKey);
             return Result.fail("Redis 写入失败");

@@ -10,7 +10,6 @@
       background-color="#183550"
       text-color="#fff"
       active-text-color="#68b8d7"
-      router
     >
       <!-- 菜单项内容 -->
       <el-menu-item index="/home/homepage" @click="navigateTo('/home/homepage')">
@@ -59,6 +58,7 @@
 <script setup>
 import { inject, ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import {useUserInfoStore} from "@/stores/userInfo.js";
 import {
   HomeFilled,
   Reading,
@@ -68,6 +68,7 @@ import {
   Setting
 } from '@element-plus/icons-vue'
 
+const userInfoStore = useUserInfoStore()
 const router = useRouter()
 const route = useRoute()
 const activeIndex = ref(route.path) // 初始化为当前路径
@@ -75,6 +76,7 @@ const activeIndex = ref(route.path) // 初始化为当前路径
 // 从父组件注入折叠状态和切换方法
 // 如果注入失败，使用本地状态
 const isCollapsed = inject('isSidebarCollapsed', ref(false))
+
 const toggleSidebar = inject('toggleSidebar', () => {
   isCollapsed.value = !isCollapsed.value
   console.log('侧边栏状态切换:', isCollapsed.value)
@@ -86,9 +88,35 @@ const handleToggleSidebar = () => {
   toggleSidebar()
 }
 
-// 导航到指定路由
+// 导航到指定路由 - 强制使用函数方式
 const navigateTo = (path) => {
-  router.push(path)
+  console.log('导航到路径:', path)
+  
+  // 使用动态导入确保组件已加载
+  if (path === '/home/add-book') {
+    // 先导入组件，确保它已加载
+    import('@/views/Home/components/AddBook.vue')
+      .then(() => {
+        router.push(path).catch(err => {
+          console.error('路由导航失败:', err)
+          // 如果仍然失败，尝试重新加载页面
+          window.location.href = path
+        })
+      })
+      .catch(err => {
+        console.error('组件导入失败:', err)
+        // 导航到错误页面
+        router.push('/error')
+      })
+  } else {
+    // 其他路由正常导航
+    router.push(path).catch(err => {
+      console.error('路由导航失败:', err)
+    })
+  }
+  
+  // 更新活动菜单项
+  activeIndex.value = path
 }
 
 // 监听路由变化，更新activeIndex

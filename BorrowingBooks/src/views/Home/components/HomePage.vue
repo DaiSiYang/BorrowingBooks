@@ -20,12 +20,12 @@ const setGreeting = () => {
   }
 }
 
-// 热门图书数据
+// 热门图书数据 - 移除借阅数量
 const popularBooks = ref([
-  { id: 1, title: '活着', author: '余华', cover: 'book1.jpg', borrowCount: 156 },
-  { id: 2, title: '三体', author: '刘慈欣', cover: 'book2.jpg', borrowCount: 142 },
-  { id: 3, title: '平凡的世界', author: '路遥', cover: 'book3.jpg', borrowCount: 128 },
-  { id: 4, title: '围城', author: '钱钟书', cover: 'book4.jpg', borrowCount: 115 }
+  { id: 1, title: '活着', author: '余华', cover: 'book1.jpg' },
+  { id: 2, title: '三体', author: '刘慈欣', cover: 'book2.jpg' },
+  { id: 3, title: '平凡的世界', author: '路遥', cover: 'book3.jpg' },
+  { id: 4, title: '围城', author: '钱钟书', cover: 'book4.jpg' }
 ])
 
 onMounted(() => {
@@ -79,7 +79,7 @@ onMounted(() => {
               <el-icon><Document /></el-icon>
             </div>
             <div class="rule-text">
-              <h3>借阅数量</h3>
+              <h3>借阅限制</h3>
               <p>每位读者最多可同时借阅5本普通图书，2本珍藏图书。</p>
             </div>
           </div>
@@ -117,9 +117,9 @@ onMounted(() => {
       </el-card>
     </div>
 
-    <!-- 热门图书 -->
+    <!-- 热门图书 - 移除借阅数量显示 -->
     <div class="popular-section">
-      <h2 class="section-title">热门借阅</h2>
+      <h2 class="section-title">热门图书</h2>
       <div class="popular-books">
         <el-card v-for="book in popularBooks" :key="book.id" class="book-card" shadow="hover">
           <div class="book-cover">
@@ -139,9 +139,7 @@ onMounted(() => {
           <div class="book-info">
             <h3 class="book-title">{{ book.title }}</h3>
             <p class="book-author">作者：{{ book.author }}</p>
-            <div class="book-stats">
-              <el-tag size="small" effect="plain" type="success">借阅 {{ book.borrowCount }} 次</el-tag>
-            </div>
+            <!-- 移除了借阅次数标签 -->
           </div>
         </el-card>
       </div>

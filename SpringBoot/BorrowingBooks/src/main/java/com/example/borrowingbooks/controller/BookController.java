@@ -1,9 +1,15 @@
 package com.example.borrowingbooks.controller;
 
 
-import org.springframework.web.bind.annotation.RequestMapping;
+import com.example.borrowingbooks.DTO.PageDTO;
+import com.example.borrowingbooks.VO.BookVO;
+import com.example.borrowingbooks.common.Result;
+import com.example.borrowingbooks.service.IBookService;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * <p>
@@ -13,8 +19,17 @@ import org.springframework.web.bind.annotation.RestController;
  * @author DaiSY
  * @since 2025-05-19
  */
+@Slf4j
 @RestController
 @RequestMapping("/book")
 public class BookController {
 
+    @Resource
+    private IBookService bookService;
+
+    @PostMapping("list")
+    public Result<List<BookVO>> getAllBook(@RequestBody PageDTO pageDTO) {
+        log.info("获取所有图书 {}" + pageDTO);
+        return bookService.getAllBook(pageDTO);
+    }
 }

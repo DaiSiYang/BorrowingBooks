@@ -1,7 +1,12 @@
 package com.example.borrowingbooks.service;
 
+import com.example.borrowingbooks.DTO.PageDTO;
+import com.example.borrowingbooks.VO.BookVO;
+import com.example.borrowingbooks.common.Result;
 import com.example.borrowingbooks.entity.Book;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +18,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IBookService extends IService<Book> {
 
+    Result<List<BookVO>> getAllBook(PageDTO pageDTO);
 }

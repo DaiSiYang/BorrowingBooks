@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import {useTokenStore} from "@/stores/tokenStore.js";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,7 +11,7 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: 'login',
+      redirect: 'home',
     },
     {
       path: "/register",
@@ -22,7 +23,6 @@ const router = createRouter({
       name: "forgetPassword",
       component: () => import('@/views/ForgotThePassword/forgotPassword.vue')
     },
-    // 添加404错误页面路由
     {
       path: '/404',
       name: 'notFound',
@@ -36,6 +36,7 @@ const router = createRouter({
       path: '/home',
       name: 'home',
       component: () => import('@/views/Home/index.vue'),
+      redirect: '/home/homepage',  // 确保直接重定向到homepage
       children: [
         {
           path: 'homepage',
@@ -43,59 +44,72 @@ const router = createRouter({
           component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
-          path: '',
-          redirect: { name: 'homepage' }
-        },
-        // 添加图书分类路由
-        {
           path: 'book-category',
           name: 'bookCategory',
           component: () => import('@/views/Home/components/BookCategory.vue')
         },
-        // 可以根据需要添加其他路由
         {
           path: 'book-list',
           name: 'bookList',
-          component: () => import('@/views/Home/components/BookList.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/BookList.vue')
         },
         {
           path: 'add-book',
           name: 'addBook',
-          component: () => import('@/views/Home/components/AddBook.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/AddBook.vue')
         },
         {
           path: 'borrow-records',
           name: 'borrowRecords',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
           path: 'borrow-applications',
           name: 'borrowApplications',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
           path: 'overdue-management',
           name: 'overdueManagement',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
           path: 'user-management',
           name: 'userManagement',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
           path: 'statistics',
           name: 'statistics',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         },
         {
           path: 'settings',
           name: 'settings',
-          component: () => import('@/views/Home/components/HomePage.vue') // 暂时使用HomePage作为占位
+          component: () => import('@/views/Home/components/HomePage.vue')
         }
       ]
     }
   ],
+})
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  const tokenStore = useTokenStore()
+  const token = tokenStore.token  // 直接使用 token 属性，而不是调用 getToken 方法
+
+  // 白名单：不需要登录的路由
+  const whiteList = ['/login', '/register', '/forgetPassword']
+
+  if (whiteList.includes(to.path)) {
+    return next()
+  }
+
+  if (!token) {
+    return next({ name: 'login' })
+  }
+
+  next()
 })
 
 export default router
