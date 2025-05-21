@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Reading, Document, InfoFilled } from '@element-plus/icons-vue'
 import {ElMessageBox, ElMessage, ElNotification} from 'element-plus'
 import {BookCategoryAPI} from "@/api/Book.js";
 
@@ -187,9 +187,32 @@ onMounted(() => {
     <div class="page-header">
       <h2 class="page-title">图书分类</h2>
       <div class="action-buttons">
-        <el-button type="primary" @click="openAddDialog">
+        <el-button type="primary" @click="openAddDialog" class="add-button">
           <el-icon><Plus /></el-icon>添加分类
         </el-button>
+      </div>
+    </div>
+    
+    <div class="category-overview">
+      <div class="overview-card">
+        <el-icon class="overview-icon"><Document /></el-icon>
+        <div class="overview-info">
+          <div class="overview-value">{{ categoryData.length }}</div>
+          <div class="overview-label">分类总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card">
+        <el-icon class="overview-icon"><Reading /></el-icon>
+        <div class="overview-info">
+          <div class="overview-value">{{ categoryData.reduce((total, category) => total + (category.bookCount || 0), 0) }}</div>
+          <div class="overview-label">图书总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-tips">
+        <el-icon><InfoFilled /></el-icon>
+        <span>分类是图书检索的重要依据，合理设置分类有助于读者快速找到所需图书</span>
       </div>
     </div>
     
@@ -200,39 +223,73 @@ onMounted(() => {
         border 
         v-loading="loading"
         row-key="id"
+        :header-cell-style="{backgroundColor: '#f9f6f2', color: '#3d2c29', fontWeight: 'bold'}"
       >
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="分类名称" min-width="150" />
-        <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip />
+        <el-table-column prop="name" label="分类名称" min-width="150">
+          <template #default="scope">
+            <div class="category-name">{{ scope.row.name }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip>
+          <template #default="scope">
+            <div class="category-desc">{{ scope.row.description || '暂无描述' }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="创建日期" width="120">
           <template #default="scope">
-            {{ formatDate(scope.row.createdAt) }}
+            <div class="category-date">{{ formatDate(scope.row.createdAt) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="图书数量" width="100" align="center">
+          <template #default="scope">
+            <el-tag 
+              :type="scope.row.bookCount > 0 ? 'success' : 'info'"
+              size="small"
+              class="book-count-tag"
+            >
+              {{ scope.row.bookCount || 0 }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
-            <el-button 
-              type="warning" 
-              size="small" 
-              circle
-              @click="openEditDialog(scope.row)"
-              title="编辑"
-            >
-              <el-icon><Edit /></el-icon>
-            </el-button>
-            <el-button 
-              type="danger" 
-              size="small" 
-              circle
-              @click="deleteCategory(scope.row)"
-              title="删除"
-              :disabled="scope.row.bookCount > 0"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
+            <div class="table-actions">
+              <el-tooltip content="编辑" placement="top" effect="light">
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  circle
+                  @click="openEditDialog(scope.row)"
+                  class="action-button edit-button"
+                >
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" effect="light">
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  circle
+                  @click="deleteCategory(scope.row)"
+                  class="action-button delete-button"
+                  :disabled="scope.row.bookCount > 0"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
       </el-table>
+      
+      <div v-if="categoryData.length === 0 && !loading" class="empty-data">
+        <el-empty description="暂无分类数据">
+          <el-button type="primary" @click="openAddDialog" class="add-empty-button">
+            添加首个分类
+          </el-button>
+        </el-empty>
+      </div>
     </el-card>
     
     <!-- 添加/编辑分类对话框 -->
@@ -240,15 +297,27 @@ onMounted(() => {
       v-model="dialogVisible" 
       :title="dialogTitle"
       width="500px"
+      destroy-on-close
+      class="category-dialog"
     >
+      <div class="dialog-icon">
+        <el-icon v-if="isEdit"><Edit /></el-icon>
+        <el-icon v-else><Plus /></el-icon>
+      </div>
+      
       <el-form 
         ref="formRef"
         :model="categoryForm"
         :rules="rules"
         label-width="100px"
+        class="category-form"
       >
         <el-form-item label="分类名称" prop="name">
-          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
+          <el-input 
+            v-model="categoryForm.name" 
+            placeholder="请输入分类名称"
+            class="custom-input"
+          />
         </el-form-item>
         
         <el-form-item label="分类描述" prop="description">
@@ -257,18 +326,19 @@ onMounted(() => {
             type="textarea" 
             :rows="4" 
             placeholder="请输入分类描述"
+            class="custom-textarea"
           />
         </el-form-item>
         
         <el-form-item v-if="isEdit" label="图书数量">
-          <el-input v-model="categoryForm.bookCount" disabled />
+          <el-input v-model="categoryForm.bookCount" class="custom-input" disabled />
         </el-form-item>
       </el-form>
       
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm">确定</el-button>
+          <el-button @click="dialogVisible = false" class="cancel-button">取消</el-button>
+          <el-button type="primary" @click="submitForm" class="confirm-button">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -277,28 +347,328 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .category-container {
-  padding: 20px;
+  padding: 24px;
+  background-color: #fff;
   
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     
     .page-title {
       font-size: 24px;
-      color: #183550;
+      color: #3d2c29;
       margin: 0;
+      position: relative;
+      padding-left: 16px;
+      font-weight: 600;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(to bottom, #8a5f41, #e36049);
+        border-radius: 2px;
+      }
     }
     
     .action-buttons {
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      
+      .add-button {
+        background-color: #8a5f41;
+        border-color: #8a5f41;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s;
+        
+        &:hover {
+          background-color: #6e4c34;
+          transform: translateY(-2px);
+        }
+        
+        .el-icon {
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+  
+  .category-overview {
+    display: flex;
+    margin-bottom: 24px;
+    gap: 20px;
+    flex-wrap: wrap;
+    
+    .overview-card {
+      background-color: #f9f6f2;
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      min-width: 200px;
+      flex: 1;
+      min-height: 100px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+      }
+      
+      .overview-icon {
+        width: 50px;
+        height: 50px;
+        background-color: rgba(138, 95, 65, 0.1);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        color: #8a5f41;
+        font-size: 24px;
+      }
+      
+      .overview-info {
+        .overview-value {
+          font-size: 28px;
+          font-weight: bold;
+          color: #3d2c29;
+          margin-bottom: 5px;
+        }
+        
+        .overview-label {
+          font-size: 14px;
+          color: #8a5f41;
+        }
+      }
+    }
+    
+    .overview-tips {
+      flex-basis: 100%;
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: #f5f0e8;
+      border-radius: 8px;
+      border-left: 4px solid #e36049;
+      
+      .el-icon {
+        font-size: 18px;
+        color: #e36049;
+        margin-right: 10px;
+      }
+      
+      span {
+        font-size: 14px;
+        color: #8a5f41;
+        line-height: 1.4;
+      }
     }
   }
   
   .table-card {
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    border: none;
+    overflow: hidden;
+    
+    .category-name {
+      font-weight: 500;
+      color: #3d2c29;
+      font-size: 15px;
+    }
+    
+    .category-desc {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .category-date {
+      color: #8a5f41;
+      font-size: 14px;
+    }
+    
+    .book-count-tag {
+      background-color: rgba(138, 95, 65, 0.1);
+      color: #8a5f41;
+      border: none;
+      border-radius: 12px;
+      
+      &.el-tag--success {
+        background-color: rgba(103, 194, 58, 0.1);
+        color: #67C23A;
+      }
+    }
+    
+    .table-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      
+      .action-button {
+        transition: all 0.3s;
+        
+        &:hover {
+          transform: translateY(-2px);
+        }
+        
+        &.edit-button {
+          background-color: #8a5f41;
+          border-color: #8a5f41;
+          
+          &:hover {
+            background-color: #6e4c34;
+          }
+        }
+        
+        &.delete-button {
+          background-color: #e36049;
+          border-color: #e36049;
+          
+          &:hover {
+            background-color: #c64c38;
+          }
+          
+          &:disabled {
+            background-color: #f0f0f0;
+            border-color: #dcdfe6;
+            color: #c0c4cc;
+          }
+        }
+      }
+    }
+    
+    .empty-data {
+      padding: 30px 0;
+      
+      .add-empty-button {
+        background-color: #8a5f41;
+        border-color: #8a5f41;
+        margin-top: 16px;
+        
+        &:hover {
+          background-color: #6e4c34;
+        }
+      }
+    }
+  }
+  
+  .category-dialog {
+    :deep(.el-dialog__header) {
+      text-align: center;
+      margin-bottom: 0;
+      position: relative;
+      padding-bottom: 0;
+    }
+    
+    :deep(.el-dialog__body) {
+      padding-top: 30px;
+    }
+    
+    :deep(.el-dialog__title) {
+      font-size: 18px;
+      font-weight: 600;
+      color: #3d2c29;
+    }
+    
+    .dialog-icon {
+      width: 60px;
+      height: 60px;
+      background-color: #f9f6f2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      
+      .el-icon {
+        font-size: 24px;
+        color: #8a5f41;
+      }
+    }
+    
+    .category-form {
+      .el-form-item__label {
+        color: #3d2c29;
+        font-weight: 500;
+      }
+      
+      .custom-input, .custom-textarea {
+        .el-input__wrapper, .el-textarea__inner {
+          border-radius: 8px;
+          box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+          
+          &:hover, &.is-focus {
+            box-shadow: 0 0 0 1px #8a5f41 inset;
+          }
+        }
+      }
+    }
+    
+    .dialog-footer {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 10px;
+      
+      .cancel-button {
+        border-color: #8a5f41;
+        color: #8a5f41;
+        border-radius: 8px;
+        padding: 8px 20px;
+        min-width: 100px;
+        
+        &:hover {
+          background-color: rgba(138, 95, 65, 0.05);
+        }
+      }
+      
+      .confirm-button {
+        background-color: #8a5f41;
+        border-color: #8a5f41;
+        border-radius: 8px;
+        padding: 8px 20px;
+        min-width: 100px;
+        
+        &:hover {
+          background-color: #6e4c34;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .category-container {
+    padding: 16px;
+    
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    
+    .category-overview {
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .dialog-footer {
+      flex-direction: column-reverse;
+      
+      .el-button {
+        width: 100%;
+      }
+    }
   }
 }
 </style>

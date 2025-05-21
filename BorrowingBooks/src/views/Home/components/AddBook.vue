@@ -9,6 +9,13 @@
     </div>
 
     <el-card class="form-card">
+      <div class="form-header">
+        <div class="form-icon">
+          <el-icon><Document /></el-icon>
+        </div>
+        <div class="form-title">图书信息</div>
+      </div>
+      
       <el-form 
         ref="bookFormRef" 
         :model="bookForm" 
@@ -17,15 +24,16 @@
         class="book-form"
         :hide-required-asterisk="false"
       >
-        <el-row :gutter="24">
+        <el-row :gutter="30">
           <el-col :xs="24" :sm="24" :md="16" :lg="16" :xl="16">
-            <el-row :gutter="20">
+            <el-row :gutter="24">
               <el-col :xs="24" :sm="12">
                 <el-form-item label="书名" prop="title">
                   <el-input 
                     v-model="bookForm.title" 
                     placeholder="请输入书名"
-                    prefix-icon="Document"
+                    :prefix-icon="Document"
+                    class="custom-input"
                   />
                 </el-form-item>
               </el-col>
@@ -34,19 +42,21 @@
                   <el-input 
                     v-model="bookForm.author" 
                     placeholder="请输入作者"
-                    prefix-icon="User"
+                    :prefix-icon="User"
+                    class="custom-input"
                   />
                 </el-form-item>
               </el-col>
             </el-row>
 
-            <el-row :gutter="20">
+            <el-row :gutter="24">
               <el-col :xs="24" :sm="12">
                 <el-form-item label="出版社" prop="publisher">
                   <el-input 
                     v-model="bookForm.publisher" 
                     placeholder="请输入出版社"
-                    prefix-icon="OfficeBuilding"
+                    :prefix-icon="OfficeBuilding"
+                    class="custom-input"
                   />
                 </el-form-item>
               </el-col>
@@ -55,19 +65,21 @@
                   <el-input 
                     v-model="bookForm.isbn" 
                     placeholder="请输入ISBN"
-                    prefix-icon="Ticket"
+                    :prefix-icon="Ticket"
+                    class="custom-input"
                   />
                 </el-form-item>
               </el-col>
             </el-row>
 
-            <el-row :gutter="20">
+            <el-row :gutter="24">
               <el-col :xs="24" :sm="12">
                 <el-form-item label="分类" prop="category">
                   <el-select 
                     v-model="bookForm.category" 
                     placeholder="请选择分类" 
                     style="width: 100%"
+                    class="custom-select"
                   >
                     <el-option 
                       v-for="item in categoryOptions" 
@@ -86,18 +98,20 @@
                     placeholder="选择出版日期"
                     style="width: 100%"
                     value-format="YYYY-MM-DD"
+                    class="custom-date-picker"
                   />
                 </el-form-item>
               </el-col>
             </el-row>
 
-            <el-row :gutter="20">
+            <el-row :gutter="24">
               <el-col :xs="24">
                 <el-form-item label="馆藏数量" prop="totalCopies">
                   <el-input-number 
                     v-model="bookForm.totalCopies" 
                     :min="1" 
                     :max="999"
+                    class="custom-input-number"
                     style="width: 100%"
                   />
                 </el-form-item>
@@ -108,37 +122,54 @@
               <el-input 
                 v-model="bookForm.description" 
                 type="textarea" 
-                :rows="4" 
+                :rows="5" 
                 placeholder="请输入图书简介"
+                class="custom-textarea"
               />
             </el-form-item>
           </el-col>
 
           <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
             <el-form-item label="封面图片" prop="cover" class="cover-upload">
-              <el-upload
-                class="cover-uploader"
-                action="#"
-                :http-request="handleUpload"
-                :show-file-list="false"
-                :before-upload="beforeUpload"
-              >
-                <div class="upload-area">
-                  <img v-if="imageUrl" :src="imageUrl" class="cover-image" />
-                  <div v-else class="upload-placeholder">
-                    <el-icon class="upload-icon"><Plus /></el-icon>
-                    <div class="upload-text">点击上传</div>
-                    <div class="upload-hint">建议尺寸: 300x400像素, JPG/PNG格式, 不超过2MB</div>
+              <div class="upload-container">
+                <el-upload
+                  class="cover-uploader"
+                  action="#"
+                  :http-request="handleUpload"
+                  :show-file-list="false"
+                  :before-upload="beforeUpload"
+                >
+                  <div class="upload-area">
+                    <img v-if="imageUrl" :src="imageUrl" class="cover-image" />
+                    <div v-else class="upload-placeholder">
+                      <div class="placeholder-icon">
+                        <el-icon class="upload-icon"><Plus /></el-icon>
+                      </div>
+                      <div class="upload-text">点击上传</div>
+                      <div class="upload-hint">建议尺寸: 300x400像素<br>JPG/PNG格式, 不超过2MB</div>
+                    </div>
                   </div>
+                </el-upload>
+                <div class="upload-tips">
+                  <el-icon><InfoFilled /></el-icon>
+                  <span>上传清晰的封面图片有助于读者快速识别图书</span>
                 </div>
-              </el-upload>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
 
+        <div class="form-divider">
+          <span>确认信息</span>
+        </div>
+
         <div class="form-actions">
-          <el-button @click="resetForm" class="reset-button">重置</el-button>
-          <el-button type="primary" @click="submitForm" class="submit-button">保存图书</el-button>
+          <el-button @click="resetForm" class="reset-button">
+            <el-icon><RefreshRight /></el-icon>重置
+          </el-button>
+          <el-button type="primary" @click="submitForm" class="submit-button">
+            <el-icon><Check /></el-icon>保存图书
+          </el-button>
         </div>
       </el-form>
     </el-card>
@@ -156,7 +187,10 @@ import {
   OfficeBuilding, 
   Ticket, 
   Plus, 
-  QuestionFilled 
+  QuestionFilled,
+  InfoFilled,
+  RefreshRight,
+  Check
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -280,9 +314,10 @@ const resetForm = () => {
 
 <style scoped lang="scss">
 .add-book-container {
-  padding: 20px;
+  padding: 24px;
   height: 100%;
   overflow-y: auto;
+  background-color: #fff;
   
   .page-header {
     display: flex;
@@ -293,24 +328,28 @@ const resetForm = () => {
       display: flex;
       align-items: center;
       cursor: pointer;
-      color: #409EFF;
+      color: #8a5f41;
       margin-right: 16px;
+      transition: all 0.3s;
       
       &:hover {
-        color: #66b1ff;
+        color: #e36049;
+        transform: translateX(-3px);
       }
       
       .el-icon {
         margin-right: 4px;
+        font-size: 16px;
       }
     }
     
     .page-title {
       font-size: 24px;
-      color: #183550;
+      color: #3d2c29;
       margin: 0;
       position: relative;
       padding-left: 16px;
+      font-weight: 600;
       
       &::before {
         content: '';
@@ -320,76 +359,192 @@ const resetForm = () => {
         transform: translateY(-50%);
         width: 4px;
         height: 24px;
-        background: linear-gradient(to bottom, #183550, #68b8d7);
+        background: linear-gradient(to bottom, #8a5f41, #e36049);
         border-radius: 2px;
       }
     }
   }
   
   .form-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    border: none;
+    overflow: hidden;
+    margin-bottom: 30px;
+    
+    .form-header {
+      display: flex;
+      align-items: center;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      border-bottom: 1px dashed rgba(138, 95, 65, 0.2);
+      
+      .form-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background-color: rgba(138, 95, 65, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        
+        .el-icon {
+          font-size: 20px;
+          color: #8a5f41;
+        }
+      }
+      
+      .form-title {
+        font-size: 18px;
+        color: #3d2c29;
+        font-weight: 600;
+      }
+    }
     
     .book-form {
       .el-form-item__label {
         font-weight: 500;
-        color: #183550;
+        color: #3d2c29;
+        padding-bottom: 8px;
+        font-size: 15px;
+      }
+      
+      .custom-input, .custom-select, .custom-date-picker, .custom-input-number, .custom-textarea {
+        .el-input__wrapper {
+          border-radius: 8px;
+          box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+          transition: all 0.3s;
+          
+          &:hover, &.is-focus {
+            box-shadow: 0 0 0 1px #8a5f41 inset;
+          }
+        }
+        
+        .el-input__prefix-inner {
+          color: #8a5f41;
+        }
       }
       
       .cover-upload {
         height: 100%;
-        display: flex;
-        flex-direction: column;
         
-        .cover-uploader {
-          width: 100%;
+        .upload-container {
+          display: flex;
+          flex-direction: column;
           height: 100%;
           
-          .upload-area {
+          .cover-uploader {
             width: 100%;
-            height: 400px;
-            border: 1px dashed #d9d9d9;
-            border-radius: 8px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: border-color 0.3s;
+            flex: 1;
             
-            &:hover {
-              border-color: #409EFF;
-            }
-            
-            .cover-image {
+            .upload-area {
               width: 100%;
-              height: 100%;
-              object-fit: cover;
-            }
-            
-            .upload-placeholder {
-              text-align: center;
-              padding: 20px;
+              height: 400px;
+              border: 2px dashed rgba(138, 95, 65, 0.3);
+              border-radius: 10px;
+              cursor: pointer;
+              position: relative;
+              overflow: hidden;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              transition: all 0.3s;
+              background-color: #f9f6f2;
               
-              .upload-icon {
-                font-size: 48px;
-                color: #8c939d;
+              &:hover {
+                border-color: #8a5f41;
+                background-color: #f5f0e8;
               }
               
-              .upload-text {
-                font-size: 16px;
-                color: #606266;
-                margin: 16px 0;
+              .cover-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 8px;
               }
               
-              .upload-hint {
-                font-size: 12px;
-                color: #909399;
-                line-height: 1.5;
+              .upload-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                width: 100%;
+                padding: 20px;
+                
+                .placeholder-icon {
+                  width: 80px;
+                  height: 80px;
+                  border-radius: 50%;
+                  background-color: rgba(138, 95, 65, 0.1);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  margin-bottom: 16px;
+                  
+                  .upload-icon {
+                    font-size: 40px;
+                    color: #8a5f41;
+                  }
+                }
+                
+                .upload-text {
+                  font-size: 16px;
+                  color: #3d2c29;
+                  margin-bottom: 10px;
+                  font-weight: 500;
+                }
+                
+                .upload-hint {
+                  font-size: 13px;
+                  color: #8a5f41;
+                  text-align: center;
+                  line-height: 1.5;
+                }
               }
             }
           }
+          
+          .upload-tips {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-top: 12px;
+            background-color: #f9f6f2;
+            border-radius: 6px;
+            
+            .el-icon {
+              font-size: 16px;
+              color: #e36049;
+              margin-right: 8px;
+            }
+            
+            span {
+              font-size: 13px;
+              color: #8a5f41;
+              line-height: 1.4;
+            }
+          }
+        }
+      }
+      
+      .form-divider {
+        display: flex;
+        align-items: center;
+        margin: 32px 0 24px;
+        
+        &::before, &::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: rgba(138, 95, 65, 0.2);
+        }
+        
+        span {
+          padding: 0 16px;
+          font-size: 14px;
+          color: #8a5f41;
         }
       }
       
@@ -397,19 +552,41 @@ const resetForm = () => {
         display: flex;
         justify-content: center;
         margin-top: 32px;
-        gap: 16px;
+        gap: 20px;
         
         .reset-button {
           min-width: 120px;
+          border-color: #8a5f41;
+          color: #8a5f41;
+          border-radius: 8px;
+          transition: all 0.3s;
+          padding: 12px 24px;
+          
+          &:hover {
+            background-color: rgba(138, 95, 65, 0.05);
+            transform: translateY(-2px);
+          }
+          
+          .el-icon {
+            margin-right: 6px;
+          }
         }
         
         .submit-button {
           min-width: 120px;
-          background: linear-gradient(135deg, #183550, #68b8d7);
-          border: none;
+          background-color: #8a5f41;
+          border-color: #8a5f41;
+          border-radius: 8px;
+          transition: all 0.3s;
+          padding: 12px 24px;
           
           &:hover {
-            background: linear-gradient(135deg, #1a3a55, #7ac5e4);
+            background-color: #6e4c34;
+            transform: translateY(-2px);
+          }
+          
+          .el-icon {
+            margin-right: 6px;
           }
         }
       }
@@ -419,13 +596,17 @@ const resetForm = () => {
 
 @media (max-width: 768px) {
   .add-book-container {
-    .form-actions {
-      flex-direction: column;
-      
-      .el-button {
-        width: 100%;
-        margin-left: 0 !important;
-        margin-bottom: 10px;
+    padding: 16px;
+    
+    .form-card {
+      .form-actions {
+        flex-direction: column;
+        
+        .el-button {
+          width: 100%;
+          margin-left: 0 !important;
+          margin-bottom: 12px;
+        }
       }
     }
   }

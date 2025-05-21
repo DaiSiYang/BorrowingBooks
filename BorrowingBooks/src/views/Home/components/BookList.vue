@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Search, Edit, Delete, View, Download, List, Grid } from '@element-plus/icons-vue'
+import { Search, Edit, Delete, View, Download, List, Grid, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {BookListAPI} from "@/api/Book.js";
 
@@ -274,6 +274,13 @@ onMounted(() => {
     </div>
     
     <el-card class="search-card">
+      <div class="card-header">
+        <div class="header-icon">
+          <el-icon><Search /></el-icon>
+        </div>
+        <div class="header-title">搜索筛选</div>
+      </div>
+      
       <el-form :model="searchForm" inline class="search-form">
         <el-form-item label="关键词">
           <el-input 
@@ -281,11 +288,12 @@ onMounted(() => {
             placeholder="书名/作者/ISBN" 
             clearable
             @keyup.enter="handleSearch"
-            prefix-icon="Search"
+            :prefix-icon="Search"
+            class="custom-input"
           />
         </el-form-item>
         <el-form-item label="分类">
-          <el-select v-model="searchForm.category" placeholder="选择分类" clearable>
+          <el-select v-model="searchForm.category" placeholder="选择分类" clearable class="custom-select">
             <el-option 
               v-for="item in categoryOptions" 
               :key="item.value" 
@@ -295,7 +303,7 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="选择状态" clearable class="custom-select">
             <el-option 
               v-for="item in statusOptions" 
               :key="item.value" 
@@ -308,13 +316,18 @@ onMounted(() => {
           <el-button type="primary" @click="handleSearch" class="search-button">
             <el-icon><Search /></el-icon>搜索
           </el-button>
-          <el-button @click="resetSearch" class="reset-button">重置</el-button>
+          <el-button @click="resetSearch" class="reset-button">
+            <el-icon><RefreshLeft /></el-icon>重置
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
     
     <!-- 切换视图按钮 -->
     <div class="view-toggle">
+      <div class="result-info">
+        共找到 <span class="highlight">{{ pagination.total }}</span> 本图书
+      </div>
       <el-radio-group v-model="viewMode" size="large">
         <el-radio-button label="table">
           <el-icon><List /></el-icon>表格视图
@@ -333,7 +346,7 @@ onMounted(() => {
         border 
         v-loading="loading"
         row-key="id"
-        :header-cell-style="{backgroundColor: '#f5f7fa', color: '#183550', fontWeight: 'bold'}"
+        :header-cell-style="{backgroundColor: '#f9f6f2', color: '#3d2c29', fontWeight: 'bold'}"
         :row-class-name="tableRowClassName"
       >
         <!-- 表格视图中的封面图片 -->
@@ -343,7 +356,7 @@ onMounted(() => {
               :src="scope.row.coverImage" 
               :preview-src-list="[scope.row.coverImage]"
               fit="cover"
-              style="width: 50px; height: 70px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+              style="width: 60px; height: 80px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
               @error="handleImageError"
             />
           </template>
@@ -373,16 +386,16 @@ onMounted(() => {
               :type="scope.row.inStock ? 'success' : 'danger'"
               size="small"
               effect="dark"
+              class="status-tag"
             >
               {{ scope.row.inStock ? '可借阅' : '已借出' }}
             </el-tag>
           </template>
         </el-table-column>
-        <!-- 添加馆藏位置列 -->
         <el-table-column prop="location" label="馆藏位置" width="100" align="center">
           <template #default="scope">
             <el-tag size="small" effect="plain" class="location-tag">
-              {{ scope.row.location }}
+              {{ scope.row.location || '未知' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -402,7 +415,7 @@ onMounted(() => {
               </el-tooltip>
               <el-tooltip content="编辑" placement="top" effect="light">
                 <el-button 
-                  type="warning" 
+                  type="primary" 
                   size="small" 
                   circle
                   @click="editBook(scope.row)"
@@ -443,7 +456,7 @@ onMounted(() => {
     
     <!-- 卡片视图 -->
     <div v-else class="card-view">
-      <el-row :gutter="24">
+      <el-row :gutter="30">
         <el-col 
           v-for="book in tableData" 
           :key="book.id" 
@@ -454,33 +467,35 @@ onMounted(() => {
           :xl="4"
           class="book-card-col"
         >
-          <el-card class="book-card" shadow="hover">
+          <div class="book-card">
             <div class="book-card-cover">
               <el-image 
                 :src="book.coverImage" 
                 fit="cover"
+                class="cover-image"
+                @error="handleImageError"
               />
               <div class="book-card-status">
                 <el-tag 
                   :type="book.inStock ? 'success' : 'danger'"
                   size="small"
                   effect="dark"
+                  class="status-tag"
                 >
                   {{ book.inStock ? '可借阅' : '已借出' }}
                 </el-tag>
               </div>
-              <div class="book-card-actions">
-                <el-button-group>
-                  <el-button type="primary" size="small" @click="viewBookDetail(book)">
+              <div class="book-card-hover">
+                <h4 class="hover-title">{{ book.title }}</h4>
+                <p class="hover-author">作者：{{ book.author }}</p>
+                <p class="hover-publisher" v-if="book.publisher">出版：{{ book.publisher }}</p>
+                <p class="hover-date" v-if="book.publishDate">出版日期：{{ formatDate(book.publishDate) }}</p>
+                <div class="hover-actions">
+                  <el-button size="small" round @click.stop="viewBookDetail(book)">
                     <el-icon><View /></el-icon>
+                    查看详情
                   </el-button>
-                  <el-button type="warning" size="small" @click="editBook(book)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button type="danger" size="small" @click="deleteBook(book)">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </el-button-group>
+                </div>
               </div>
             </div>
             <div class="book-card-info">
@@ -488,21 +503,20 @@ onMounted(() => {
               <p class="book-card-author">{{ book.author }}</p>
               <div class="book-card-meta">
                 <el-tag size="small" effect="plain" class="category-tag">{{ book.categoryName }}</el-tag>
-                <el-tag 
-                  :type="book.inStock ? 'success' : 'danger'"
-                  size="small"
-                  effect="dark"
-                >
-                  {{ book.inStock ? '可借阅' : '已借出' }}
-                </el-tag>
+                <span class="book-isbn">ISBN: {{ book.isbn }}</span>
               </div>
-              <!-- 添加馆藏位置显示 -->
-              <div class="book-card-location">
-                <span class="location-label">馆藏位置:</span>
-                <el-tag size="small" effect="plain" class="location-tag">{{ book.location }}</el-tag>
+              <div class="book-card-actions">
+                <el-button-group>
+                  <el-button type="primary" size="small" class="edit-btn" @click.stop="editBook(book)">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" class="delete-btn" @click.stop="deleteBook(book)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </div>
             </div>
-          </el-card>
+          </div>
         </el-col>
       </el-row>
       
@@ -529,30 +543,29 @@ onMounted(() => {
     >
       <el-button type="primary" @click="$router.push('/home/add-book')">添加图书</el-button>
     </el-empty>
-    
-    <!-- 添加占位元素确保滚动 -->
-    <div class="scroll-spacer"></div>
   </div>
 </template>
 
 <style scoped lang="scss">
 .book-list-container {
-  padding: 20px;
+  padding: 24px;
   height: 100%;
   overflow-y: auto;
+  background-color: #fff;
   
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     
     .page-title {
       font-size: 24px;
-      color: #183550;
+      color: #3d2c29;
       margin: 0;
       position: relative;
       padding-left: 16px;
+      font-weight: 600;
       
       &::before {
         content: '';
@@ -562,7 +575,7 @@ onMounted(() => {
         transform: translateY(-50%);
         width: 4px;
         height: 24px;
-        background: linear-gradient(to bottom, #183550, #68b8d7);
+        background: linear-gradient(to bottom, #8a5f41, #e36049);
         border-radius: 2px;
       }
     }
@@ -571,56 +584,113 @@ onMounted(() => {
       display: flex;
       gap: 12px;
       
-      .add-button {
-        background: linear-gradient(135deg, #183550, #68b8d7);
-        border: none;
-        
-        &:hover {
-          background: linear-gradient(135deg, #1a3a55, #7ac5e4);
-        }
-      }
-      
       .export-button {
-        border: 1px solid #dcdfe6;
+        border: 1px solid #8a5f41;
+        color: #8a5f41;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s;
         
         &:hover {
-          border-color: #c6e2ff;
-          color: #409EFF;
+          background-color: rgba(138, 95, 65, 0.05);
+          transform: translateY(-2px);
+        }
+        
+        .el-icon {
+          margin-right: 6px;
         }
       }
     }
   }
   
   .search-card {
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    border: none;
+    overflow: hidden;
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      
+      .header-icon {
+        width: 36px;
+        height: 36px;
+        background-color: rgba(138, 95, 65, 0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        
+        .el-icon {
+          font-size: 20px;
+          color: #8a5f41;
+        }
+      }
+      
+      .header-title {
+        font-size: 16px;
+        color: #3d2c29;
+        font-weight: 600;
+      }
+    }
     
     .search-form {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 16px;
       
       .el-form-item {
         margin-bottom: 10px;
         margin-right: 0;
+        
+        .el-form-item__label {
+          color: #3d2c29;
+          font-weight: 500;
+        }
+      }
+      
+      .custom-input, .custom-select {
+        .el-input__wrapper {
+          border-radius: 8px;
+          box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+          
+          &:hover, &.is-focus {
+            box-shadow: 0 0 0 1px #8a5f41 inset;
+          }
+        }
+        
+        .el-input__prefix-inner {
+          color: #8a5f41;
+        }
       }
       
       .search-button {
-        background: #183550;
-        border: none;
+        background-color: #8a5f41;
+        border-color: #8a5f41;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s;
         
         &:hover {
-          background: #1a3a55;
+          background-color: #6e4c34;
+          transform: translateY(-2px);
         }
       }
       
       .reset-button {
-        border: 1px solid #dcdfe6;
+        border-color: #8a5f41;
+        color: #8a5f41;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s;
         
         &:hover {
-          border-color: #c6e2ff;
-          color: #409EFF;
+          background-color: rgba(138, 95, 65, 0.05);
+          transform: translateY(-2px);
         }
       }
     }
@@ -629,20 +699,45 @@ onMounted(() => {
   .view-toggle {
     margin-bottom: 20px;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    
+    .result-info {
+      font-size: 14px;
+      color: #666;
+      
+      .highlight {
+        color: #e36049;
+        font-weight: 600;
+        font-size: 16px;
+      }
+    }
     
     .el-radio-group {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 4px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      
+      .el-radio-button__inner {
+        background-color: #f9f6f2;
+        color: #8a5f41;
+        border-color: rgba(138, 95, 65, 0.2);
+      }
+      
+      .el-radio-button__original-radio:checked + .el-radio-button__inner {
+        background-color: #8a5f41;
+        border-color: #8a5f41;
+        box-shadow: -1px 0 0 0 #8a5f41;
+      }
     }
   }
   
   .table-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
-    height: auto;
-    overflow: visible;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    border: none;
+    overflow: hidden;
+    margin-bottom: 30px;
     
     .el-table {
       border-radius: 8px;
@@ -651,36 +746,63 @@ onMounted(() => {
       .book-title-cell {
         .book-title-text {
           font-weight: 500;
-          color: #183550;
+          color: #3d2c29;
         }
       }
       
       .category-tag {
+        background-color: rgba(138, 95, 65, 0.1);
+        color: #8a5f41;
+        border: none;
         border-radius: 12px;
+        padding: 0 10px;
       }
       
       .location-tag {
-        border-radius: 4px;
+        background-color: rgba(76, 141, 174, 0.1);
+        color: #4c8dae;
+        border: none;
+        border-radius: 12px;
+        padding: 0 10px;
       }
       
-      .text-warning {
-        color: #E6A23C;
-        font-weight: bold;
-      }
-      
-      .text-success {
-        color: #67C23A;
+      .status-tag {
+        border-radius: 12px;
+        font-weight: 500;
+        padding: 0 10px;
+        
+        &.el-tag--success {
+          background-color: rgba(103, 194, 58, 0.9);
+        }
+        
+        &.el-tag--danger {
+          background-color: rgba(245, 108, 108, 0.9);
+        }
       }
       
       .table-actions {
         display: flex;
-        justify-content: space-around;
+        justify-content: center;
+        gap: 10px;
         
         .action-button {
           transition: all 0.3s;
+          border: none;
           
           &:hover {
             transform: translateY(-2px);
+          }
+          
+          &.view-button {
+            background-color: #4c8dae;
+          }
+          
+          &.edit-button {
+            background-color: #8a5f41;
+          }
+          
+          &.delete-button {
+            background-color: #e36049;
           }
         }
       }
@@ -689,135 +811,47 @@ onMounted(() => {
     .borrowed-row {
       background-color: rgba(245, 108, 108, 0.05);
     }
-    
-    .maintenance-row {
-      background-color: rgba(144, 147, 153, 0.05);
-    }
-  }
-  
-  .card-view {
-    margin-bottom: 20px;
-    
-    .book-card-col {
-      margin-bottom: 24px;
-    }
-    
-    .book-card {
-      height: 100%;
-      border-radius: 8px;
-      overflow: hidden;
-      transition: all 0.3s;
-      border: none;
-      
-      &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-        
-        .book-card-actions {
-          opacity: 1;
-        }
-      }
-      
-      .book-card-cover {
-        position: relative;
-        height: 220px;
-        overflow: hidden;
-        
-        .el-image {
-          width: 100%;
-          height: 100%;
-          transition: all 0.5s;
-          
-          &:hover {
-            transform: scale(1.05);
-          }
-        }
-        
-        .book-card-status {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          z-index: 2;
-        }
-        
-        .book-card-actions {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: rgba(0, 0, 0, 0.6);
-          padding: 10px;
-          display: flex;
-          justify-content: center;
-          opacity: 0;
-          transition: all 0.3s;
-          z-index: 2;
-        }
-      }
-      
-      .book-card-info {
-        padding: 15px;
-        
-        .book-card-title {
-          font-size: 16px;
-          font-weight: 500;
-          color: #183550;
-          margin: 0 0 8px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .book-card-author {
-          font-size: 14px;
-          color: #606266;
-          margin: 0 0 12px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .book-card-meta {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 10px;
-        }
-        
-        .book-card-location {
-          display: flex;
-          align-items: center;
-          font-size: 13px;
-          
-          .location-label {
-            color: #909399;
-            margin-right: 5px;
-          }
-        }
-      }
-    }
   }
   
   .pagination-container {
     display: flex;
     justify-content: center;
     margin-top: 20px;
-    margin-bottom: 20px;
+    padding: 10px 0;
+    
+    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+      background-color: #8a5f41;
+    }
+    
+    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled):hover) {
+      color: #8a5f41;
+    }
   }
   
   .empty-data {
     margin: 40px 0;
+    
+    .el-button {
+      background-color: #8a5f41;
+      border-color: #8a5f41;
+      margin-top: 16px;
+      
+      &:hover {
+        background-color: #6e4c34;
+      }
+    }
   }
 }
 
+// 响应式调整
 @media (max-width: 768px) {
   .book-list-container {
+    padding: 16px;
+    
     .page-header {
       flex-direction: column;
       align-items: flex-start;
-      
-      .action-buttons {
-        margin-top: 16px;
-      }
+      gap: 16px;
     }
     
     .search-form {
@@ -825,145 +859,139 @@ onMounted(() => {
         width: 100%;
       }
     }
-  }
-}
-
-// 添加处理图片错误的函数
-:deep(.el-image__error) {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: #909399;
-  background-color: #f5f7fa;
-}
-
-// 确保主容器可以滚动
-
-// 确保表格容器不限制高度
-.table-card {
-  height: auto !important;
-  overflow: visible !important;
-  
-  .el-table {
-    border-radius: 8px;
-    overflow: hidden;
     
-    .book-title-cell {
-      .book-title-text {
-        font-weight: 500;
-        color: #183550;
-      }
+    .view-toggle {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
     }
-    
-    .category-tag {
-      border-radius: 12px;
-    }
-    
-    .location-tag {
-      border-radius: 4px;
-    }
-    
-    .text-warning {
-      color: #E6A23C;
-      font-weight: bold;
-    }
-    
-    .text-success {
-      color: #67C23A;
-    }
-    
-    .table-actions {
-      display: flex;
-      justify-content: space-around;
-      
-      .action-button {
-        transition: all 0.3s;
-        
-        &:hover {
-          transform: translateY(-2px);
-        }
-      }
-    }
-  }
-  
-  .borrowed-row {
-    background-color: rgba(245, 108, 108, 0.05);
-  }
-  
-  .maintenance-row {
-    background-color: rgba(144, 147, 153, 0.05);
   }
 }
 
 .card-view {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
   
   .book-card-col {
-    margin-bottom: 24px;
+    margin-bottom: 30px;
   }
   
   .book-card {
     height: 100%;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
+    background-color: white;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     transition: all 0.3s;
-    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
     
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+      transform: translateY(-8px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
       
-      .book-card-actions {
-        opacity: 1;
+      .book-card-cover {
+        .book-card-hover {
+          opacity: 1;
+        }
+        
+        .cover-image {
+          transform: scale(1.05);
+        }
       }
     }
     
     .book-card-cover {
       position: relative;
-      height: 220px;
+      height: 260px;
       overflow: hidden;
       
-      .el-image {
+      .cover-image {
         width: 100%;
         height: 100%;
-        transition: all 0.5s;
-        
-        &:hover {
-          transform: scale(1.05);
-        }
+        object-fit: cover;
+        transition: transform 0.5s ease;
       }
       
       .book-card-status {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 12px;
+        right: 12px;
         z-index: 2;
+        
+        .status-tag {
+          border-radius: 20px;
+          padding: 0 12px;
+          height: 26px;
+          line-height: 26px;
+          font-weight: 500;
+          
+          &.el-tag--success {
+            background-color: rgba(103, 194, 58, 0.9);
+          }
+          
+          &.el-tag--danger {
+            background-color: rgba(245, 108, 108, 0.9);
+          }
+        }
       }
       
-      .book-card-actions {
+      .book-card-hover {
         position: absolute;
-        bottom: 0;
+        top: 0;
         left: 0;
-        right: 0;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 10px;
+        width: 100%;
+        height: 100%;
+        background: rgba(61, 44, 41, 0.85);
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        padding: 24px;
         opacity: 0;
-        transition: all 0.3s;
-        z-index: 2;
+        transition: opacity 0.3s ease;
+        color: white;
+        
+        .hover-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 12px;
+        }
+        
+        .hover-author, .hover-publisher, .hover-date {
+          margin-bottom: 8px;
+          font-size: 14px;
+          opacity: 0.9;
+        }
+        
+        .hover-actions {
+          margin-top: auto;
+          display: flex;
+          justify-content: center;
+          
+          .el-button {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #3d2c29;
+            border: none;
+            padding: 8px 16px;
+            
+            &:hover {
+              background-color: white;
+              transform: translateY(-2px);
+            }
+          }
+        }
       }
     }
     
     .book-card-info {
-      padding: 15px;
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       
       .book-card-title {
         font-size: 16px;
-        font-weight: 500;
-        color: #183550;
+        font-weight: 600;
+        color: #3d2c29;
         margin: 0 0 8px;
         white-space: nowrap;
         overflow: hidden;
@@ -972,7 +1000,7 @@ onMounted(() => {
       
       .book-card-author {
         font-size: 14px;
-        color: #606266;
+        color: #8a5f41;
         margin: 0 0 12px;
         white-space: nowrap;
         overflow: hidden;
@@ -982,45 +1010,58 @@ onMounted(() => {
       .book-card-meta {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 10px;
+        align-items: center;
+        margin-bottom: 15px;
+        
+        .category-tag {
+          background-color: rgba(138, 95, 65, 0.1);
+          color: #8a5f41;
+          border: none;
+          border-radius: 12px;
+          padding: 0 8px;
+        }
+        
+        .book-isbn {
+          font-size: 12px;
+          color: #999;
+        }
       }
       
-      .book-card-location {
+      .book-card-actions {
+        margin-top: auto;
         display: flex;
-        align-items: center;
-        font-size: 13px;
+        justify-content: flex-end;
         
-        .location-label {
-          color: #909399;
-          margin-right: 5px;
+        .el-button-group {
+          .el-button {
+            border: none;
+            
+            &.edit-btn {
+              background-color: #8a5f41;
+            }
+            
+            &.delete-btn {
+              background-color: #e36049;
+            }
+            
+            &:hover {
+              opacity: 0.9;
+            }
+          }
         }
       }
     }
   }
-  
-  .pagination-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .empty-data {
-    margin: 40px 0;
-  }
 }
 
-// 确保分页容器正常显示
-.pagination-container {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  
-
-}
-
-// 添加一个占位元素，确保有足够的内容触发滚动
-.scroll-spacer {
-  height: 50px;
-  width: 100%;
+// 图片错误处理样式
+:deep(.el-image__error) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #8a5f41;
+  background-color: #f9f6f2;
 }
 </style>

@@ -1,5 +1,3 @@
-
-
 <template>
   <div class="personal-center">
     <!-- 顶部背景 -->
@@ -9,12 +7,6 @@
       <div class="back-button">
         <el-button icon="ArrowLeft" circle @click="goBack"></el-button>
       </div>
-      <!-- 装饰性书籍元素 -->
-      <div class="floating-books">
-        <div class="book book-1"></div>
-        <div class="book book-2"></div>
-        <div class="book book-3"></div>
-      </div>
     </div>
 
     <!-- 用户信息卡片 -->
@@ -23,19 +15,19 @@
         <el-avatar :size="100" :src="userInfoStore.userInfo.avatarUrl" />
       </div>
       <div class="user-info">
-        <h2>{{ userInfoStore.userInfo.username }}</h2>
+        <h2>{{ userInfoStore.userInfo.username || '未登录' }}</h2>
         <div class="user-stats">
           <div class="stat-item">
             <el-icon><Reading /></el-icon>
-            <span>借阅 {{ 0 }}</span>
+            <span>借阅 {{ borrowHistory.length }}</span>
           </div>
           <div class="stat-item">
             <el-icon><Collection /></el-icon>
-            <span>发布 {{ 0 }}</span>
+            <span>发布 {{ myBooks.length }}</span>
           </div>
           <div class="stat-item">
             <el-icon><Calendar /></el-icon>
-            <span>注册于 {{ userInfoStore.userInfo.createTime }}</span>
+            <span>注册于 {{ formatDate(userInfoStore.userInfo.createTime) }}</span>
           </div>
         </div>
       </div>
@@ -43,7 +35,7 @@
         <el-button type="primary" @click="publishNewBook" class="publish-btn">
           <el-icon><Plus /></el-icon> 发布新图书
         </el-button>
-        <el-button class="edit-btn">
+        <el-button class="edit-btn" @click="activeTab = 'profile'">
           <el-icon><Edit /></el-icon> 编辑资料
         </el-button>
       </div>
@@ -54,29 +46,34 @@
       <el-tabs v-model="activeTab" class="custom-tabs">
         <el-tab-pane label="我的发布" name="myBooks">
           <transition name="fade-fast" mode="out-in">
-            <div :key="activeTab + '-myBooks'">
-              <div class="book-list">
-                <el-empty v-if="myBooks.length === 0" description="暂无发布的图书"></el-empty>
-                <div v-else class="book-grid">
-                  <div v-for="book in myBooks" :key="book.id" class="book-card">
-                    <div class="book-cover">
-                      <img :src="book.cover" :alt="book.title">
-                      <div class="book-status" :class="book.status === '可借阅' ? 'available' : 'borrowed'">
-                        {{ book.status }}
-                      </div>
-                      <div class="book-ribbon" v-if="book.borrowCount > 10">热门</div>
+            <div :key="activeTab + '-myBooks'" class="tab-content">
+              <div v-if="myBooks.length === 0" class="empty-state">
+                <el-empty description="暂无发布的图书">
+                  <template #description>
+                    <p>您还没有发布任何图书</p>
+                  </template>
+                  <el-button type="primary" @click="publishNewBook">现在发布</el-button>
+                </el-empty>
+              </div>
+              <div v-else class="book-grid">
+                <div v-for="book in myBooks" :key="book.id" class="book-card">
+                  <div class="book-cover">
+                    <img :src="book.cover" :alt="book.title">
+                    <div class="book-status" :class="book.status === '可借阅' ? 'available' : 'borrowed'">
+                      {{ book.status }}
                     </div>
-                    <div class="book-info">
-                      <h3 class="book-title">{{ book.title }}</h3>
-                      <p class="book-author">{{ book.author }}</p>
-                      <p class="book-publish-time">发布于: {{ book.publishTime }}</p>
-                      <p class="book-borrow-count">
-                        <el-icon><Reading /></el-icon> 已借阅 {{ book.borrowCount }} 次
-                      </p>
-                      <div class="book-actions">
-                        <el-button size="small" type="primary" @click="editBook(book)">编辑</el-button>
-                        <el-button size="small" type="danger" @click="deleteBook(book)">删除</el-button>
-                      </div>
+                    <div class="book-ribbon" v-if="book.borrowCount > 10">热门</div>
+                  </div>
+                  <div class="book-info">
+                    <h3 class="book-title">{{ book.title }}</h3>
+                    <p class="book-author">{{ book.author }}</p>
+                    <p class="book-publish-time">发布于: {{ formatDate(book.publishTime) }}</p>
+                    <p class="book-borrow-count">
+                      <el-icon><Reading /></el-icon> 已借阅 {{ book.borrowCount }} 次
+                    </p>
+                    <div class="book-actions">
+                      <el-button size="small" type="primary" @click="editBook(book)" plain>编辑</el-button>
+                      <el-button size="small" type="danger" @click="deleteBook(book)" plain>删除</el-button>
                     </div>
                   </div>
                 </div>
@@ -87,51 +84,57 @@
         
         <el-tab-pane label="借阅历史" name="borrowHistory">
           <transition name="fade-fast" mode="out-in">
-            <div :key="activeTab + '-borrowHistory'">
-              <div class="borrow-history">
-                <el-empty v-if="borrowHistory.length === 0" description="暂无借阅记录"></el-empty>
-                <el-timeline v-else>
-                  <el-timeline-item
-                    v-for="record in borrowHistory"
-                    :key="record.id"
-                    :type="record.status === '已归还' ? 'success' : 'primary'"
-                    :timestamp="record.borrowTime"
-                  >
-                    <div class="history-item">
-                      <div class="book-cover">
-                        <img :src="record.cover" :alt="record.title">
-                      </div>
-                      <div class="history-info">
-                        <h3>{{ record.title }}</h3>
-                        <p>作者: {{ record.author }}</p>
-                        <p>借阅时间: {{ record.borrowTime }}</p>
-                        <p v-if="record.returnTime">归还时间: {{ record.returnTime }}</p>
-                        <el-tag :type="record.status === '已归还' ? 'success' : 'warning'">
-                          {{ record.status }}
-                        </el-tag>
-                      </div>
-                    </div>
-                  </el-timeline-item>
-                </el-timeline>
+            <div :key="activeTab + '-borrowHistory'" class="tab-content">
+              <div v-if="borrowHistory.length === 0" class="empty-state">
+                <el-empty description="暂无借阅记录">
+                  <template #description>
+                    <p>您还没有借阅过任何图书</p>
+                  </template>
+                  <el-button type="primary" @click="router.push('/home/book-list')">去借阅</el-button>
+                </el-empty>
               </div>
+              <el-timeline v-else>
+                <el-timeline-item
+                  v-for="record in borrowHistory"
+                  :key="record.id"
+                  :type="record.status === '已归还' ? 'success' : 'primary'"
+                  :timestamp="formatDate(record.borrowTime)"
+                  :hollow="record.status === '已归还'"
+                >
+                  <div class="history-item">
+                    <div class="book-cover">
+                      <img :src="record.cover" :alt="record.title">
+                    </div>
+                    <div class="history-info">
+                      <h3>{{ record.title }}</h3>
+                      <p>作者: {{ record.author }}</p>
+                      <p>借阅时间: {{ formatDate(record.borrowTime) }}</p>
+                      <p v-if="record.returnTime">归还时间: {{ formatDate(record.returnTime) }}</p>
+                      <el-tag :type="record.status === '已归还' ? 'success' : 'warning'" effect="light">
+                        {{ record.status }}
+                      </el-tag>
+                    </div>
+                  </div>
+                </el-timeline-item>
+              </el-timeline>
             </div>
           </transition>
         </el-tab-pane>
         
         <el-tab-pane label="个人资料" name="profile">
           <transition name="fade-fast" mode="out-in">
-            <div :key="activeTab + '-profile'">
+            <div :key="activeTab + '-profile'" class="tab-content">
               <div class="profile-info">
                 <div class="profile-card">
                   <div class="profile-header">
-                    <el-icon class="profile-icon"><User /></el-icon> {/* Changed */}
+                    <el-icon class="profile-icon"><User /></el-icon>
                     <h3>基本信息</h3>
                   </div>
                   <el-descriptions :column="1" border>
-                    <el-descriptions-item label="用户名">{{ userInfoStore.userInfo.username }}</el-descriptions-item>
-                    <el-descriptions-item label="邮箱">{{ userInfoStore.userInfo.email }}</el-descriptions-item>
-                    <el-descriptions-item label="手机号">{{ userInfoStore.userInfo.phone }}</el-descriptions-item>
-                    <el-descriptions-item label="注册时间">{{ userInfoStore.userInfo.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="用户名">{{ userInfoStore.userInfo.username || '未设置' }}</el-descriptions-item>
+                    <el-descriptions-item label="邮箱">{{ userInfoStore.userInfo.email || '未设置' }}</el-descriptions-item>
+                    <el-descriptions-item label="手机号">{{ userInfoStore.userInfo.phone || '未设置' }}</el-descriptions-item>
+                    <el-descriptions-item label="注册时间">{{ formatDate(userInfoStore.userInfo.createTime) }}</el-descriptions-item>
                   </el-descriptions>
                 </div>
                 
@@ -147,14 +150,11 @@
     </div>
     
     <!-- 底部装饰元素 -->
-    <div class="bottom-decoration">
-      <div class="book-shelf"></div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ArrowLeft, Reading, Collection, Calendar, Plus, Edit, User } from '@element-plus/icons-vue';
@@ -162,10 +162,30 @@ import {useUserInfoStore} from "@/stores/userInfo.js";
 
 const router = useRouter();
 const userInfoStore = useUserInfoStore();
+const pageLoaded = ref(false);
 
 // 返回上一页方法
 const goBack = () => {
   router.go(-1);
+};
+
+// 格式化日期函数
+const formatDate = (dateString) => {
+  if (!dateString) return '未知日期';
+  
+  try {
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) return dateString;
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    return dateString;
+  }
 };
 
 // 我发布的图书列表
@@ -279,13 +299,11 @@ const publishNewBook = () => {
   router.push('/publish-book');
 };
 
-const pageLoaded = ref(false);
-
 onMounted(() => {
   // 这里应该调用API获取用户信息和图书列表
   console.log('个人中心页面已加载');
   // 触发入场动画
-  setTimeout(() => { // 使用 setTimeout 确保 DOM 渲染完成
+  setTimeout(() => {
     pageLoaded.value = true;
   }, 100);
 });
@@ -295,17 +313,30 @@ onMounted(() => {
 .personal-center {
   position: relative;
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background-color: #f8f9fc;
   padding-bottom: 40px;
   overflow-x: hidden;
 }
 
 .header-bg {
-  height: 250px;
-  background-image: url('https://img.freepik.com/free-photo/books-arrangement-with-copy-space_23-2148898331.jpg');
+  height: 240px;
+  background-image: linear-gradient(135deg, #183550 0%, #2c5282 100%);
   background-size: cover;
   background-position: center;
   position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path fill="%23ffffff" fill-opacity="0.05" d="M10 10L90 10 90 90 10 90z"/></svg>');
+    background-size: 30px;
+    opacity: 0.3;
+  }
   
   .overlay {
     position: absolute;
@@ -313,7 +344,7 @@ onMounted(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5));
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.3));
   }
   
   .back-button {
@@ -323,78 +354,24 @@ onMounted(() => {
     z-index: 20;
     
     .el-button {
-      background-color: rgba(255, 255, 255, 0.8);
+      background-color: rgba(255, 255, 255, 0.9);
       border: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      transition: all 0.3s ease;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
       
       &:hover {
         background-color: white;
-        transform: scale(1.05);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
       }
     }
-  }
-  
-  // 装饰性书籍元素
-  .floating-books {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    
-    .book {
-      position: absolute;
-      background-size: contain;
-      background-repeat: no-repeat;
-      opacity: 0.6;
-      filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
-      
-      &.book-1 {
-        width: 100px;
-        height: 150px;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M21 4H3a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zm-1 14H4V6h16v12z"/><path d="M8 8h8v2H8zm0 4h8v2H8z"/></svg>');
-        top: 30px;
-        right: 15%;
-        transform: rotate(15deg);
-        animation: float 8s ease-in-out infinite;
-      }
-      
-      &.book-2 {
-        width: 120px;
-        height: 180px;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M6 22h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2zm0-2V4h12v16H6z"/><path d="M9 7h6v2H9zm0 4h6v2H9zm0 4h6v2H9z"/></svg>');
-        bottom: 40px;
-        left: 10%;
-        transform: rotate(-10deg);
-        animation: float 10s ease-in-out infinite reverse;
-      }
-      
-      &.book-3 {
-        width: 90px;
-        height: 130px;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M19 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 18H5V4h14v16z"/><path d="M7 8h10v2H7zm0 4h10v2H7zm0 4h7v2H7z"/></svg>');
-        top: 50px;
-        left: 25%;
-        transform: rotate(5deg);
-        animation: float 12s ease-in-out infinite;
-      }
-    }
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotate(var(--rotation, 0deg));
-  }
-  50% {
-    transform: translateY(-20px) rotate(var(--rotation, 0deg));
   }
 }
 
 .user-card {
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
   padding: 30px;
   margin: -80px auto 30px;
   max-width: 1000px;
@@ -402,26 +379,26 @@ onMounted(() => {
   align-items: center;
   position: relative;
   z-index: 10;
+  transform: translateY(30px);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: -15px;
-    right: 30px;
-    width: 40px;
-    height: 40px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23409eff"><path d="M21 4H3a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zm-1 14H4V6h16v12z"/><path d="M8 8h8v2H8zm0 4h8v2H8z"/></svg>');
-    background-repeat: no-repeat;
-    transform: rotate(-15deg);
-    opacity: 0.2;
+  &.animate-slide-up {
+    transform: translateY(0);
+    opacity: 1;
   }
   
   .user-avatar {
-    margin-right: 30px;
+    margin-right: 40px;
     
     .el-avatar {
       border: 4px solid white;
-      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      transition: transform 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
     }
   }
   
@@ -429,29 +406,41 @@ onMounted(() => {
     flex: 1;
     
     h2 {
-      margin: 0 0 15px;
-      font-size: 26px;
+      margin: 0 0 18px;
+      font-size: 28px;
       color: #303133;
       font-weight: 600;
     }
     
     .user-stats {
       display: flex;
-      gap: 25px;
+      gap: 20px;
       
       .stat-item {
         display: flex;
         align-items: center;
         color: #606266;
-        background-color: #f5f7fa;
-        padding: 8px 15px;
+        background-color: #f8f9fc;
+        padding: 10px 18px;
         border-radius: 20px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.02);
+        transition: all 0.3s ease;
         
-        i {
-          margin-right: 8px;
-          font-size: 16px;
+        &:hover {
+          background-color: #fff;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+          transform: translateY(-2px);
+        }
+        
+        .el-icon {
+          margin-right: 10px;
+          font-size: 18px;
           color: #409eff;
+        }
+        
+        span {
+          font-weight: 500;
         }
       }
     }
@@ -459,28 +448,34 @@ onMounted(() => {
   
   .user-actions {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     
     .publish-btn {
       background: linear-gradient(135deg, #409eff, #007bff);
       border: none;
-      box-shadow: 0 4px 10px rgba(64, 158, 255, 0.3);
-      transition: all 0.3s ease;
+      padding: 12px 20px;
+      font-weight: 500;
+      box-shadow: 0 4px 15px rgba(64, 158, 255, 0.25);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
       
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(64, 158, 255, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4);
       }
     }
     
     .edit-btn {
-      border: 1px solid #dcdfe6;
+      border: 1px solid #e4e7ed;
       background-color: white;
-      transition: all 0.3s ease;
+      padding: 12px 20px;
+      font-weight: 500;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
       
       &:hover {
         border-color: #c0c4cc;
         background-color: #f5f7fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
     }
   }
@@ -491,22 +486,34 @@ onMounted(() => {
   margin: 0 auto 40px;
   background-color: white;
   border-radius: 12px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
-  padding: 25px;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.06);
+  padding: 30px;
   position: relative;
+  transform: translateY(30px);
+  opacity: 0;
+  transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-delay: 0.1s;
   
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -20px;
-    right: -20px;
-    width: 60px;
-    height: 60px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23409eff"><path d="M6 22h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2zm0-2V4h12v16H6z"/><path d="M9 7h6v2H9zm0 4h6v2H9zm0 4h6v2H9z"/></svg>');
-    background-repeat: no-repeat;
-    opacity: 0.1;
-    z-index: 0;
-    transform: rotate(15deg);
+  &.animate-slide-up {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .tab-content {
+    min-height: 400px;
+  }
+  
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 0;
+    
+    p {
+      margin: 16px 0;
+      color: #909399;
+    }
   }
 }
 
@@ -543,27 +550,27 @@ onMounted(() => {
 .book-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
-  padding: 10px;
+  gap: 25px;
+  padding: 10px 0;
 }
 
 .book-card {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; // Added border-color
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   background-color: white;
   position: relative;
-  border: 1px solid transparent; // Initial transparent border
+  border: 1px solid rgba(0, 0, 0, 0.03);
 
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18); // Slightly more pronounced shadow
-    border-color: #409eff; // Highlight border on hover
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+    border-color: rgba(64, 158, 255, 0.2);
   }
   
   .book-cover {
-    height: 220px;
+    height: 200px;
     position: relative;
     overflow: hidden;
     
@@ -571,7 +578,7 @@ onMounted(() => {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.5s ease;
+      transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
     
     &:hover img {
@@ -582,22 +589,23 @@ onMounted(() => {
       position: absolute;
       top: 15px;
       right: 15px;
-      padding: 5px 10px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-size: 12px;
-      font-weight: bold;
+      font-weight: 600;
       z-index: 2;
+      letter-spacing: 0.5px;
       
       &.available {
-        background-color: #67c23a;
+        background-color: rgba(103, 194, 58, 0.95);
         color: white;
-        box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+        box-shadow: 0 3px 10px rgba(103, 194, 58, 0.3);
       }
       
       &.borrowed {
-        background-color: #e6a23c;
+        background-color: rgba(230, 162, 60, 0.95);
         color: white;
-        box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+        box-shadow: 0 3px 10px rgba(230, 162, 60, 0.3);
       }
     }
     
@@ -605,14 +613,15 @@ onMounted(() => {
       position: absolute;
       top: 15px;
       left: -30px;
-      background: #f56c6c;
+      background: linear-gradient(45deg, #f56c6c, #e83e8c);
       color: white;
-      padding: 5px 30px;
+      padding: 6px 30px;
       transform: rotate(-45deg);
       font-size: 12px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       z-index: 2;
+      letter-spacing: 1px;
     }
   }
   
@@ -622,7 +631,7 @@ onMounted(() => {
     .book-title {
       margin: 0 0 8px;
       font-size: 18px;
-      font-weight: bold;
+      font-weight: 600;
       color: #303133;
       white-space: nowrap;
       overflow: hidden;
@@ -643,8 +652,8 @@ onMounted(() => {
       display: flex;
       align-items: center;
       
-      i {
-        margin-right: 5px;
+      .el-icon {
+        margin-right: 6px;
         color: #409eff;
       }
     }
@@ -653,17 +662,14 @@ onMounted(() => {
       margin-top: 15px;
       display: flex;
       justify-content: space-between;
+      gap: 10px;
       
       .el-button {
         flex: 1;
-        margin: 0 5px;
+        transition: all 0.3s ease;
         
-        &:first-child {
-          margin-left: 0;
-        }
-        
-        &:last-child {
-          margin-right: 0;
+        &:hover {
+          transform: translateY(-2px);
         }
       }
     }
@@ -675,7 +681,7 @@ onMounted(() => {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 5px;
+    height: 4px;
     background: linear-gradient(90deg, #409eff, #007bff);
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -688,59 +694,95 @@ onMounted(() => {
 
 .borrow-history {
   padding: 15px;
+}
+
+.history-item {
+  display: flex;
+  background-color: #f9fafc;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid rgba(0, 0, 0, 0.02);
   
-  .history-item {
-    display: flex;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s ease;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    background-color: white;
+  }
+  
+  .book-cover {
+    width: 90px;
+    height: 130px;
+    margin-right: 25px;
+    flex-shrink: 0;
     
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
     }
     
-    .book-cover {
-      width: 90px;
-      height: 130px;
-      margin-right: 25px;
-      
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 6px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-      }
+    &:hover img {
+      transform: scale(1.05);
+    }
+  }
+  
+  .history-info {
+    flex: 1;
+    
+    h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      color: #303133;
+      font-weight: 600;
     }
     
-    .history-info {
-      flex: 1;
-      
-      h3 {
-        margin: 0 0 12px;
-        font-size: 18px;
-        color: #303133;
-        font-weight: 600;
-      }
-      
-      p {
-        margin: 8px 0;
-        color: #606266;
-        font-size: 14px;
-      }
-      
-      .el-tag {
-        margin-top: 10px;
-        padding: 0 12px;
-        height: 28px;
-        line-height: 26px;
-        border-radius: 14px;
-      }
+    p {
+      margin: 8px 0;
+      color: #606266;
+      font-size: 14px;
     }
+    
+    .el-tag {
+      margin-top: 12px;
+      padding: 0 15px;
+      height: 28px;
+      line-height: 26px;
+      border-radius: 14px;
+      font-weight: 500;
+    }
+  }
+}
+
+:deep(.el-timeline) {
+  padding: 10px 20px;
+  
+  .el-timeline-item__tail {
+    border-left: 2px solid #e4e7ed;
+  }
+  
+  .el-timeline-item__node {
+    background-color: #409eff;
+    
+    &.is-hollow {
+      background-color: #fff;
+      border-color: #67c23a;
+    }
+  }
+  
+  .el-timeline-item__wrapper {
+    padding-left: 20px;
+  }
+  
+  .el-timeline-item__timestamp {
+    color: #909399;
+    font-size: 13px;
+    margin-top: 8px;
   }
 }
 
@@ -748,24 +790,32 @@ onMounted(() => {
   padding: 20px;
   
   .profile-card {
-    background-color: #f8f9fa;
-    border-radius: 10px;
+    background-color: #f9fafc;
+    border-radius: 12px;
     padding: 25px;
     margin-bottom: 30px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+      background-color: white;
+    }
     
     .profile-header {
       display: flex;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       
       .profile-icon {
         font-size: 24px;
         color: #409eff;
-        margin-right: 10px;
+        margin-right: 12px;
         background-color: rgba(64, 158, 255, 0.1);
-        width: 40px;
-        height: 40px;
+        width: 45px;
+        height: 45px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -774,8 +824,9 @@ onMounted(() => {
       
       h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 20px;
         color: #303133;
+        font-weight: 600;
       }
     }
     
@@ -783,10 +834,20 @@ onMounted(() => {
       .el-descriptions__label {
         width: 120px;
         color: #606266;
+        font-weight: 500;
       }
       
       .el-descriptions__content {
         color: #303133;
+        font-weight: 400;
+      }
+      
+      .el-descriptions__body {
+        background-color: white;
+      }
+      
+      .el-descriptions-item__container {
+        margin-bottom: 0;
       }
     }
   }
@@ -799,50 +860,41 @@ onMounted(() => {
     
     .el-button {
       min-width: 120px;
-    }
-  }
-}
-
-// 底部装饰元素
-.bottom-decoration {
-  position: relative;
-  height: 60px;
-  margin-top: 40px;
-  
-  .book-shelf {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 20px;
-    background-color: #8c6a56;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: -15px;
-      left: 0;
-      right: 0;
-      height: 15px;
-      background: repeating-linear-gradient(
-        90deg,
-        #e74c3c,
-        #e74c3c 30px,
-        #3498db 30px,
-        #3498db 60px,
-        #2ecc71 60px,
-        #2ecc71 90px,
-        #f1c40f 90px,
-        #f1c40f 120px,
-        #9b59b6 120px,
-        #9b59b6 150px
-      );
+      padding: 12px 25px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      &[type="primary"] {
+        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+      }
     }
   }
 }
 
 // 响应式调整
+@media (max-width: 991px) {
+  .user-card {
+    margin-left: 15px;
+    margin-right: 15px;
+    padding: 25px;
+  }
+  
+  .content-area {
+    margin-left: 15px;
+    margin-right: 15px;
+    padding: 25px 20px;
+  }
+  
+  .book-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+}
+
 @media (max-width: 768px) {
   .user-card {
     flex-direction: column;
@@ -859,27 +911,96 @@ onMounted(() => {
     }
     
     .user-actions {
-      margin-top: 20px;
+      margin-top: 25px;
       width: 100%;
       justify-content: center;
     }
   }
   
   .book-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   }
   
   .history-item {
     flex-direction: column;
     
     .book-cover {
-      margin: 0 auto 15px;
+      margin: 0 auto 20px;
+    }
+    
+    .history-info {
+      text-align: center;
+    }
+  }
+  
+  .profile-info {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-bg {
+    height: 180px;
+  }
+  
+  .user-card {
+    margin-top: -60px;
+    padding: 20px 15px;
+  }
+  
+  .user-info {
+    h2 {
+      font-size: 22px;
+      margin-bottom: 15px;
+    }
+    
+    .user-stats {
+      gap: 10px;
+      
+      .stat-item {
+        padding: 8px 12px;
+        font-size: 12px;
+        
+        .el-icon {
+          font-size: 14px;
+          margin-right: 6px;
+        }
+      }
+    }
+  }
+  
+  .user-actions {
+    flex-direction: column;
+    gap: 10px;
+    
+    .el-button {
+      width: 100%;
+    }
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
+  
+  .custom-tabs {
+    :deep(.el-tabs__item) {
+      padding: 0 15px;
+      font-size: 14px;
+    }
+  }
+  
+  .profile-actions {
+    flex-direction: column;
+    
+    .el-button {
+      width: 100%;
     }
   }
 }
 </style>
 
 // 标签页内容切换动画
+<style>
 .fade-fast-enter-active,
 .fade-fast-leave-active {
   transition: opacity 0.3s ease;
@@ -889,3 +1010,4 @@ onMounted(() => {
 .fade-fast-leave-to {
   opacity: 0;
 }
+</style>

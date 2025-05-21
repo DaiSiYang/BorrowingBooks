@@ -41,7 +41,11 @@ const router = createRouter({
         {
           path: 'homepage',
           name: 'homepage',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Home/components/HomePage.vue'),
+          meta: {
+            title: '首页',
+            requireAuth: true
+          }
         },
         {
           path: 'book-category',
@@ -61,32 +65,72 @@ const router = createRouter({
         {
           path: 'borrow-records',
           name: 'borrowRecords',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Home/components/BorrowRecords.vue')
         },
         {
           path: 'borrow-applications',
           name: 'borrowApplications',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Home/components/BorrowApplications.vue')
         },
         {
           path: 'overdue-management',
           name: 'overdueManagement',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Home/components/OverdueManagement.vue')
         },
         {
-          path: 'user-management',
-          name: 'userManagement',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          path: 'user',
+          name: 'userRoot',
+          redirect: '/home/user/list',
+          children: [
+            {
+              path: 'list',
+              name: 'userList',
+              component: () => import('@/views/Home/components/User/UserList.vue'),
+              meta: { title: '用户列表' }
+            },
+            {
+              path: 'detail/:id',
+              name: 'userDetail',
+              component: () => import('@/views/Home/components/User/UserDetail.vue'),
+              meta: { title: '用户详情' }
+            },
+            {
+              path: 'permissions/:id',
+              name: 'userPermissions',
+              component: () => import('@/views/Home/components/User/UserPermissions.vue'),
+              meta: { title: '权限配置' }
+            },
+            {
+              path: 'logs/:id',
+              name: 'userLogs',
+              component: () => import('@/views/Home/components/User/UserLogs.vue'),
+              meta: { title: '操作日志' }
+            },
+            {
+              path: 'import-export',
+              name: 'userImportExport',
+              component: () => import('@/views/Home/components/User/UserImportExport.vue'),
+              meta: { title: '用户导入导出' }
+            }
+          ]
         },
         {
           path: 'statistics',
           name: 'statistics',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Statistics/StatisticsAnalysis.vue'),
+          meta: {
+            title: '统计分析',
+            requireAuth: true
+          }
         },
         {
           path: 'settings',
           name: 'settings',
-          component: () => import('@/views/Home/components/HomePage.vue')
+          component: () => import('@/views/Settings/SystemSettings.vue'),
+          meta: {
+            title: '系统设置',
+            requireAuth: true
+          }
         },
         // 添加个人中心路由
         {
