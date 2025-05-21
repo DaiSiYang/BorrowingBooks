@@ -31,10 +31,13 @@ public class BookVO {
     /**
      * 状态(1-可借阅,0-已借出,2-已损坏,3-已下架)
      */
-    private Boolean status;
+    private Integer status;
 
     private String location;
 
     private LocalDateTime createTime;
+
     private String coverImage;
+
+    private Integer stock;
 }

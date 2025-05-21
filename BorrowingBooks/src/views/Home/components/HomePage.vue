@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import {Calendar, Document, Refresh, Star, Warning, Search, Reading, InfoFilled} from "@element-plus/icons-vue";
-import { HotBookCarouselAPI, HotBooksListAPI, BookDetailAPI } from '@/api/Book.js';
+import {Calendar, Document, Refresh, Star, Warning, Search, Reading, InfoFilled, View, Edit, Delete, Download} from "@element-plus/icons-vue";
+import { HotBookCarouselAPI, HotBooksListAPI, BookDetailAPI, BorrowBookAPI } from '@/api/Book.js';
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
@@ -29,8 +29,7 @@ const setGreeting = () => {
 // 前往图书详情页
 const goToBookDetail = (book) => {
   router.push({
-    name: 'bookDetail',
-    params: { id: book.id }
+    path: `/home/book-detail/${book.id}`
   })
 }
 
@@ -62,6 +61,61 @@ const openBookDetail = (book) => {
   // 临时使用前端数据，后续接口就绪后替换为上面的API调用
   bookDetail.value = { ...book }
   bookDetailVisible.value = true
+}
+
+// 借阅图书
+const borrowBook = async (book) => {
+  try {
+    const response = await BorrowBookAPI(book.id)
+    
+    // 调整判断逻辑，只要请求成功就认为借阅成功
+    ElMessage.success(`《${book.title}》借阅成功！`)
+    
+    // 如果库存属性存在，减少库存
+    if (book.stock !== undefined) {
+      book.stock -= 1
+    }
+    
+    // 标记该书为已借阅状态
+    book.isBorrowed = true
+    
+    // 如果库存为0，更新状态
+    if (book.stock <= 0) {
+      book.status = 0 // 已借出
+    }
+  } catch (error) {
+    console.error('借阅图书失败:', error)
+    ElMessage.error('借阅失败，请稍后再试')
+  }
+}
+
+// 在详情对话框中借阅图书
+const borrowBookFromDetail = async () => {
+  try {
+    const response = await BorrowBookAPI(bookDetail.value.id)
+    
+    // 调整判断逻辑，只要请求成功就认为借阅成功
+    ElMessage.success(`《${bookDetail.value.title}》借阅成功！`)
+    
+    // 更新详情中的库存和状态
+    if (bookDetail.value.stock !== undefined) {
+      bookDetail.value.stock -= 1
+    }
+    if (bookDetail.value.availableCount !== undefined) {
+      bookDetail.value.availableCount -= 1
+    }
+    
+    // 标记该书为已借阅状态
+    bookDetail.value.isBorrowed = true
+    
+    // 如果库存为0，更新状态
+    if (bookDetail.value.stock <= 0) {
+      bookDetail.value.status = 0 // 已借出
+    }
+  } catch (error) {
+    console.error('借阅图书失败:', error)
+    ElMessage.error('借阅失败，请稍后再试')
+  }
 }
 
 // 借阅规则数据
@@ -277,8 +331,14 @@ onMounted(() => {
               <p class="book-author">作者：{{ book.author }}</p>
               <p class="book-desc">{{ book.desc }}</p>
               <div class="book-actions">
-                <el-button type="primary" round>
-                  <el-icon><Reading /></el-icon> 借阅
+                <el-button 
+                  type="primary" 
+                  round 
+                  @click.stop="borrowBook(book)"
+                  :disabled="book.isBorrowed || book.stock <= 0 || book.status === 0"
+                >
+                  <el-icon><Reading /></el-icon> 
+                  {{ book.isBorrowed ? '已借阅' : '借阅' }}
                 </el-button>
                 <el-button type="info" round @click="goToBookDetail(book)">
                   <el-icon><InfoFilled /></el-icon> 详情
@@ -297,8 +357,15 @@ onMounted(() => {
               <div class="book-hover-info">
                 <p class="book-desc-preview">{{ book.desc }}</p>
                 <div class="book-actions">
-                  <el-button type="primary" round size="small">
-                    <el-icon><Reading /></el-icon> 借阅
+                  <el-button 
+                    type="primary" 
+                    round 
+                    size="small" 
+                    @click.stop="borrowBook(book)"
+                    :disabled="book.isBorrowed || book.stock <= 0 || book.status === 0"
+                  >
+                    <el-icon><Reading /></el-icon> 
+                    {{ book.isBorrowed ? '已借阅' : '借阅' }}
                   </el-button>
                   <el-button type="info" round size="small" @click="goToBookDetail(book)">
                     <el-icon><InfoFilled /></el-icon> 详情
@@ -367,7 +434,14 @@ onMounted(() => {
             <span class="rating-value">{{ bookDetail.rating }}</span>
           </div>
           <div class="book-actions">
-            <el-button type="primary" icon="Reading">借阅此书</el-button>
+            <el-button 
+              type="primary" 
+              icon="Reading" 
+              @click="borrowBookFromDetail"
+              :disabled="bookDetail.isBorrowed || bookDetail.stock <= 0 || bookDetail.status === 0"
+            >
+              {{ bookDetail.isBorrowed ? '已借阅' : '借阅此书' }}
+            </el-button>
             <el-button type="success" icon="Star">加入收藏</el-button>
           </div>
         </div>

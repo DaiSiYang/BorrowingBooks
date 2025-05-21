@@ -68,7 +68,7 @@ public class Book implements Serializable {
     /**
      * 状态(1-可借阅,0-已借出,2-已损坏,3-已下架)
      */
-    private Boolean status;
+    private Integer status;
 
     /**
      * 馆藏位置
@@ -91,4 +91,6 @@ public class Book implements Serializable {
     private LocalDateTime updateTime;
 
     private String coverImage;
+
+    private Integer stock;
 }

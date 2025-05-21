@@ -32,4 +32,22 @@ public class BookController {
         log.info("获取所有图书 {}" + pageDTO);
         return bookService.getAllBook(pageDTO);
     }
+
+    @GetMapping("/detail/{id}")
+    public Result<BookVO> getBookById(@PathVariable Long id) {
+        log.info("获取图书 {}", id);
+        return bookService.getBookById(id);
+    }
+
+    @GetMapping("/{id}")
+    public Result<String> borrow(@PathVariable Long id) {
+        log.info("借阅图书 {}", id);
+        return bookService.borrow(id);
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<String> deleteBook(@PathVariable Long id) {
+        log.info("删除图书 {}", id);
+        return bookService.deleteBook(id);
+    }
 }

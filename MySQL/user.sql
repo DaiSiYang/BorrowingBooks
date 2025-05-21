@@ -59,27 +59,33 @@ CREATE TABLE `book` (
                         KEY `idx_status` (`status`),
                         KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书表';
+ALTER TABLE `book`
+    ADD COLUMN `stock` int(11) NOT NULL DEFAULT 10 COMMENT '库存数量';
 
 -- ----------------------------
 -- 借阅记录表结构（添加逻辑删除）
 -- ----------------------------
 CREATE TABLE `borrow_record` (
-                                 `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '记录ID',
-                                 `user_id` int(11) NOT NULL COMMENT '借阅用户ID',
-                                 `book_id` int(11) NOT NULL COMMENT '图书ID',
-                                 `borrow_date` datetime NOT NULL COMMENT '借阅日期',
-                                 `return_date` datetime DEFAULT NULL COMMENT '应归还日期',
-                                 `actual_return_date` datetime DEFAULT NULL COMMENT '实际归还日期',
-                                 `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态(1-借阅中,0-已归还,2-逾期,3-续借)',
-                                 `is_deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除(0-未删除,1-已删除)',
-                                 `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                 `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                 `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+                                 `user_id` INT(11) UNSIGNED NOT NULL COMMENT '借阅用户ID',
+                                 `book_id` INT(11) UNSIGNED NOT NULL COMMENT '图书ID',
+                                 `borrow_date` DATETIME NOT NULL COMMENT '借阅日期',
+                                 `return_date` DATETIME DEFAULT NULL COMMENT '应归还日期',
+                                 `actual_return_date` DATETIME DEFAULT NULL COMMENT '实际归还日期',
+                                 `status` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态(1-借阅中, 0-已归还, 2-逾期, 3-续借)',
+                                 `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除(0-未删除, 1-已删除)',
+                                 `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                 `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                  PRIMARY KEY (`id`),
                                  KEY `idx_user_id` (`user_id`),
                                  KEY `idx_book_id` (`book_id`),
                                  KEY `idx_status` (`status`),
                                  KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借阅记录表';
+ALTER TABLE borrow_record
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+    MODIFY COLUMN user_id BIGINT UNSIGNED NOT NULL COMMENT '借阅用户ID',
+    MODIFY COLUMN book_id BIGINT UNSIGNED NOT NULL COMMENT '图书ID';
 
 -- ----------------------------
 -- 图书分类表结构（添加逻辑删除）

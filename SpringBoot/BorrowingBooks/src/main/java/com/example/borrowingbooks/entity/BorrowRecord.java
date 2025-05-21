@@ -32,12 +32,12 @@ public class BorrowRecord implements Serializable {
      * 记录ID
      */
     @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
     /**
      * 借阅用户ID
      */
-    private Integer userId;
+    private Long userId;
 
     /**
      * 图书ID
@@ -62,7 +62,7 @@ public class BorrowRecord implements Serializable {
     /**
      * 状态(1-借阅中,0-已归还,2-逾期,3-续借)
      */
-    private Boolean status;
+    private Integer status;
 
     /**
      * 逻辑删除(0-未删除,1-已删除)

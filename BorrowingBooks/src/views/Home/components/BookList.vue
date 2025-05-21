@@ -3,6 +3,9 @@ import { ref, onMounted, reactive, computed } from 'vue'
 import { Search, Edit, Delete, View, Download, List, Grid, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {BookListAPI} from "@/api/Book.js";
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // 处理图片加载错误
 const handleImageError = (e) => {
@@ -46,11 +49,7 @@ const filteredBooks = computed(() => {
   
   // 根据状态筛选 - 修改为使用status字段
   if (searchForm.status) {
-    if (searchForm.status === '可借阅') {
-      result = result.filter(book => book.status === true)
-    } else if (searchForm.status === '已借出') {
-      result = result.filter(book => book.status === false)
-    }
+    result = result.filter(book => String(book.status) === searchForm.status)
   }
   
   // 更新分页信息
@@ -87,17 +86,34 @@ const categoryOptions = [
   { value: '6', label: '物理学' }
 ];
 
+// 添加状态转换工具函数
+const getStatusInfo = (status) => {
+  const statusMap = {
+    1: { text: '可借阅', type: 'success' },
+    0: { text: '已借出', type: 'info' },
+    2: { text: '已损坏', type: 'warning' },
+    3: { text: '已下架', type: 'danger' }
+  }
+  return statusMap[status] || { text: '未知', type: 'info' }
+}
+
 // 状态选项
 const statusOptions = [
   { value: '', label: '全部状态' },
-  { value: '可借阅', label: '可借阅' },
-  { value: '已借出', label: '已借出' }
+  { value: '1', label: '可借阅' },
+  { value: '0', label: '已借出' },
+  { value: '2', label: '已损坏' },
+  { value: '3', label: '已下架' }
 ]
 
 // 表格行样式
 const tableRowClassName = ({ row }) => {
-  if (!row.inStock) {
+  if (row.status === 0) {
     return 'borrowed-row'
+  } else if (row.status === 2) {
+    return 'damaged-row'
+  } else if (row.status === 3) {
+    return 'removed-row'
   }
   return ''
 }
@@ -134,11 +150,9 @@ const handleSizeChange = (val) => {
 // 查看图书详情
 const viewBookDetail = (row) => {
   console.log('查看图书详情:', row)
-  ElMessage({
-    type: 'info',
-    message: `正在查看《${row.title}》的详情`
+  router.push({
+    path: `/home/book-detail/${row.id}`
   })
-  // 跳转到详情页或打开详情对话框
 }
 
 // 编辑图书
@@ -223,14 +237,20 @@ const fetchAllBooks = async () => {
           coverUrl = '/src/assets/default-book.jpg'; // 请确保这个路径是正确的
         }
         
+        // 获取状态信息
+        const statusInfo = getStatusInfo(book.status);
+        
         return {
           ...book,
           // 使用处理后的图片URL
           coverImage: '/src/assets/Image/图书封面.png',
-          // 使用status字段作为inStock
-          inStock: book.status === true,
+          // 使用status字段判断是否可借（只有status为1时才可借）
+          inStock: book.status === 1,
+          // 添加状态信息
+          statusText: statusInfo.text,
+          statusType: statusInfo.type,
           // 根据status字段设置可借状态
-          availableCopies: book.status === true ? 1 : 0,
+          availableCopies: book.status === 1 ? 1 : 0,
           totalCopies: 1,
           // 获取分类名称
           categoryName: getCategoryName(book.categoryId)
@@ -380,15 +400,26 @@ onMounted(() => {
             {{ formatDate(scope.row.publishDate) }}
           </template>
         </el-table-column>
+        <el-table-column label="库存" width="80" align="center">
+          <template #default="scope">
+            <el-tag 
+              :type="scope.row.stock > 0 ? 'primary' : 'danger'"
+              size="small"
+              effect="plain"
+            >
+              {{ scope.row.stock || 0 }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="馆藏" width="100" align="center">
           <template #default="scope">
             <el-tag 
-              :type="scope.row.inStock ? 'success' : 'danger'"
+              :type="scope.row.statusType"
               size="small"
               effect="dark"
               class="status-tag"
             >
-              {{ scope.row.inStock ? '可借阅' : '已借出' }}
+              {{ scope.row.statusText }}
             </el-tag>
           </template>
         </el-table-column>
@@ -477,12 +508,12 @@ onMounted(() => {
               />
               <div class="book-card-status">
                 <el-tag 
-                  :type="book.inStock ? 'success' : 'danger'"
+                  :type="book.statusType"
                   size="small"
                   effect="dark"
                   class="status-tag"
                 >
-                  {{ book.inStock ? '可借阅' : '已借出' }}
+                  {{ book.statusText }}
                 </el-tag>
               </div>
               <div class="book-card-hover">
@@ -490,6 +521,8 @@ onMounted(() => {
                 <p class="hover-author">作者：{{ book.author }}</p>
                 <p class="hover-publisher" v-if="book.publisher">出版：{{ book.publisher }}</p>
                 <p class="hover-date" v-if="book.publishDate">出版日期：{{ formatDate(book.publishDate) }}</p>
+                <p class="hover-stock">库存：{{ book.stock || 0 }}</p>
+                <p class="hover-status" :class="'status-' + book.statusType">状态：{{ book.statusText }}</p>
                 <div class="hover-actions">
                   <el-button size="small" round @click.stop="viewBookDetail(book)">
                     <el-icon><View /></el-icon>
@@ -504,6 +537,15 @@ onMounted(() => {
               <div class="book-card-meta">
                 <el-tag size="small" effect="plain" class="category-tag">{{ book.categoryName }}</el-tag>
                 <span class="book-isbn">ISBN: {{ book.isbn }}</span>
+              </div>
+              <div class="book-card-stock">
+                <el-tag 
+                  :type="book.stock > 0 ? 'primary' : 'danger'"
+                  size="small"
+                  effect="plain"
+                >
+                  库存: {{ book.stock || 0 }}
+                </el-tag>
               </div>
               <div class="book-card-actions">
                 <el-button-group>
@@ -809,6 +851,14 @@ onMounted(() => {
     }
     
     .borrowed-row {
+      background-color: rgba(144, 147, 153, 0.05);
+    }
+    
+    .damaged-row {
+      background-color: rgba(230, 162, 60, 0.05);
+    }
+    
+    .removed-row {
       background-color: rgba(245, 108, 108, 0.05);
     }
   }
@@ -962,6 +1012,37 @@ onMounted(() => {
           opacity: 0.9;
         }
         
+        .hover-stock {
+          margin-bottom: 8px;
+          font-size: 14px;
+          opacity: 0.9;
+          color: #ffd21e;
+          font-weight: bold;
+        }
+        
+        .hover-status {
+          margin-bottom: 8px;
+          font-size: 14px;
+          opacity: 0.9;
+          font-weight: bold;
+          
+          &.status-success {
+            color: #67c23a;
+          }
+          
+          &.status-info {
+            color: #909399;
+          }
+          
+          &.status-warning {
+            color: #e6a23c;
+          }
+          
+          &.status-danger {
+            color: #f56c6c;
+          }
+        }
+        
         .hover-actions {
           margin-top: auto;
           display: flex;
@@ -1025,6 +1106,12 @@ onMounted(() => {
           font-size: 12px;
           color: #999;
         }
+      }
+      
+      .book-card-stock {
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: flex-start;
       }
       
       .book-card-actions {

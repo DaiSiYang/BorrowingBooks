@@ -44,3 +44,23 @@ export const BookDetailAPI = async (id) => {
         throw e;
     }
 }
+
+// 借阅图书API
+export const BorrowBookAPI = async (id) => {
+    try {
+        return await http.get(`/book/${id}`);
+    } catch (e) {
+        console.error('借阅图书失败:', e);
+        throw e;
+    }
+}
+
+// 删除图书API
+export const DeleteBookAPI = async (id) => {
+    try {
+        return await http.delete(`/book/${id}`);
+    } catch (e) {
+        console.error('删除图书失败:', e);
+        throw e;
+    }
+}

@@ -19,4 +19,10 @@ import java.util.List;
 public interface IBookService extends IService<Book> {
 
     Result<List<BookVO>> getAllBook(PageDTO pageDTO);
+
+    Result<BookVO> getBookById(Long id);
+
+    Result<String> borrow(Long id);
+
+    Result<String> deleteBook(Long id);
 }

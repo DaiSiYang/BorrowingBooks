@@ -2,19 +2,28 @@ package com.example.borrowingbooks.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
 import com.example.borrowingbooks.DTO.PageDTO;
 import com.example.borrowingbooks.VO.BookVO;
+import com.example.borrowingbooks.common.RedisLock;
 import com.example.borrowingbooks.common.Result;
 import com.example.borrowingbooks.entity.Book;
+import com.example.borrowingbooks.entity.BorrowRecord;
+import com.example.borrowingbooks.entity.LoginUser;
 import com.example.borrowingbooks.mapper.BookMapper;
 import com.example.borrowingbooks.service.IBookService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.borrowingbooks.service.IBorrowRecordService;
 import com.example.borrowingbooks.utils.RedisUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -30,9 +39,14 @@ import java.util.stream.Collectors;
 public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IBookService {
 
     private static final String BOOK_LIST = "book:list";
+    private static final String BOOK_LOCK = "book:lock:";
 
     @Resource
     private RedisUtil redis;
+    @Resource
+    private IBorrowRecordService borrowRecordService;
+    @Resource
+    private RedisLock redisLock;
 
     @Override
     public Result<List<BookVO>> getAllBook(PageDTO pageDTO) {
@@ -63,6 +77,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
                 .location(book.getLocation())
                 .createTime(book.getCreateTime())
                 .coverImage(book.getCoverImage())
+                .stock(book.getStock())
                 .build()).toList();
         boolean json = redis.setJson(cacheKey, collect, 30);
         if (!json){
@@ -70,5 +85,95 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
             return Result.fail("Redis 写入失败");
         }
         return Result.ok(collect);
+    }
+
+    @Override
+    public Result<BookVO> getBookById(Long id){
+        if (id == null){
+            return Result.fail("图书ID不存在");
+        }
+        Book byId = this.getById(id);
+        if (byId == null){
+            log.error("图书不存在");
+            return Result.fail("图书不存在");
+        }
+        BookVO.BookVOBuilder builder = BookVO.builder()
+                .id(byId.getId())
+                .title(byId.getTitle())
+                .author(byId.getAuthor())
+                .publisher(byId.getPublisher())
+                .publishDate(byId.getPublishDate())
+                .isbn(byId.getIsbn())
+                .categoryId(byId.getCategoryId())
+                .status(byId.getStatus())
+                .location(byId.getLocation())
+                .stock(byId.getStock())
+                .createTime(byId.getCreateTime());
+
+        return Result.ok( builder.build());
+    }
+
+    @Override
+    @Transactional
+    public Result<String> borrow(Long id) {
+        log.info("借阅图书 {}", id);
+        if (id == null){
+            return Result.fail("图书ID不存在");
+        }
+        String key = String.format(BOOK_LOCK, id);
+        String string = UUID.randomUUID().toString();
+        boolean lock = redisLock.tryLock(key, string);
+        try {
+            if (!lock){
+                log.error("图书 {} 正在借阅中", id);
+                return Result.fail("图书正在借阅中");
+            }
+            Book byId = this.getById(id);
+            if (byId == null){
+                log.error("图书不存在");
+                return Result.fail("图书不存在");
+            }
+            if (byId.getStock() <= 0){
+                log.error("图书 {} 库存不足", id);
+                return Result.fail("图书库存不足");
+            }
+            byId.setStock(byId.getStock() - 1);
+            boolean update = this.updateById(byId);
+            if (!update){
+                log.error("图书 {} 更新失败", id);
+                return Result.fail("图书更新失败");
+            }
+            // 添加借阅记录
+            LoginUser loginUser = (LoginUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Long userId = loginUser.getUser().getId();
+            BorrowRecord build = BorrowRecord.builder()
+                    .userId(userId)
+                    .bookId(Math.toIntExact(id))
+                    .borrowDate(LocalDateTime.now())
+                    .returnDate(LocalDateTime.now().plusDays(7))
+                    .status(1)
+                    .build();
+            boolean save = borrowRecordService.save(build);
+            if (!save){
+                log.error("图书 {} 添加借阅记录失败", id);
+                return Result.fail("图书添加借阅记录失败");
+            }
+            log.info("图书 {} 借阅成功", id);
+            return Result.ok("借阅成功");
+        } finally {
+            redisLock.unlock(key, string);
+        }
+    }
+
+    @Override
+    public Result<String> deleteBook(Long id) {
+        if (id == null){
+            return Result.fail("图书ID不存在");
+        }
+        if (this.removeById(id)){
+            return Result.ok("删除成功");
+        }
+        redis.delete(BOOK_LIST);
+        return Result.fail("删除失败");
     }
 }
