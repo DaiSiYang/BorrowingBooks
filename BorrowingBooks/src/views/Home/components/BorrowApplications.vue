@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Search, RefreshLeft, CheckCircle, CircleCloseFilled, CircleClose, View } from '@element-plus/icons-vue'
+import { Search, RefreshLeft, CheckCircle, CircleCloseFilled, CircleClose, View, Check, MoreFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import service from '@/utils/http.js'
 
 // 申请状态选项
 const statusOptions = [
@@ -15,11 +16,13 @@ const statusOptions = [
 const searchForm = reactive({
   keyword: '',
   status: '',
-  dateRange: []
+  dateRange: null,
+  userId: ''
 })
 
 // 加载状态
 const loading = ref(false)
+const tableLoading = ref(false)
 
 // 所有申请数据
 const allApplications = ref([])
@@ -75,28 +78,26 @@ const tableData = computed(() => {
   return filteredApplications.value.slice(start, end)
 })
 
-// 处理搜索
-const handleSearch = () => {
-  pagination.currentPage = 1
-}
-
 // 重置搜索
 const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.status = ''
-  searchForm.dateRange = []
-  pagination.currentPage = 1
+  searchForm.dateRange = null
+  searchForm.userId = ''
+  fetchApplications()
 }
 
 // 处理分页变化
 const handleCurrentChange = (val) => {
   pagination.currentPage = val
+  fetchApplications()
 }
 
 // 处理每页显示数量变化
 const handleSizeChange = (val) => {
   pagination.pageSize = val
   pagination.currentPage = 1
+  fetchApplications()
 }
 
 // 查看申请详情
@@ -200,97 +201,161 @@ const getStatusText = (status) => {
   }
 }
 
-// 模拟获取借阅申请数据
-const fetchApplications = () => {
-  loading.value = true
+// 获取借阅申请列表
+const fetchApplications = async () => {
+  tableLoading.value = true
   
-  // 模拟API请求延迟
-  setTimeout(() => {
-    // 这里应该是调用真实的API
-    // 模拟数据
-    allApplications.value = [
-      {
-        applicationId: 'BA20230001',
-        title: '活着',
-        author: '余华',
-        isbn: '9787506365437',
-        coverImage: '/src/assets/Image/book1.jpg',
-        applicant: '张三',
-        applyDate: '2023-10-01',
-        expectedBorrowDays: 30,
-        reason: '课程需要',
-        status: 'pending',
-        processDate: null,
-        processBy: null,
-        rejectReason: null
-      },
-      {
-        applicationId: 'BA20230002',
-        title: '三体',
-        author: '刘慈欣',
-        isbn: '9787229030933',
-        coverImage: '/src/assets/Image/book2.jpg',
-        applicant: '李四',
-        applyDate: '2023-10-05',
-        expectedBorrowDays: 15,
-        reason: '个人阅读',
-        status: 'approved',
-        processDate: '2023-10-06',
-        processBy: '王管理',
-        rejectReason: null
-      },
-      {
-        applicationId: 'BA20230003',
-        title: '平凡的世界',
-        author: '路遥',
-        isbn: '9787530216781',
-        coverImage: '/src/assets/Image/book3.jpg',
-        applicant: '王五',
-        applyDate: '2023-10-08',
-        expectedBorrowDays: 30,
-        reason: '研究需要',
-        status: 'rejected',
-        processDate: '2023-10-09',
-        processBy: '李管理',
-        rejectReason: '该书已被预约'
-      },
-      {
-        applicationId: 'BA20230004',
-        title: '围城',
-        author: '钱钟书',
-        isbn: '9787020090006',
-        coverImage: '/src/assets/Image/book4.jpg',
-        applicant: '赵六',
-        applyDate: '2023-10-10',
-        expectedBorrowDays: 20,
-        reason: '个人兴趣',
-        status: 'pending',
-        processDate: null,
-        processBy: null,
-        rejectReason: null
-      },
-      {
-        applicationId: 'BA20230005',
-        title: '百年孤独',
-        author: '加西亚·马尔克斯',
-        isbn: '9787544253994',
-        coverImage: '/src/assets/Image/book3.jpg',
-        applicant: '孙七',
-        applyDate: '2023-10-12',
-        expectedBorrowDays: 15,
-        reason: '课程作业',
-        status: 'pending',
-        processDate: null,
-        processBy: null,
-        rejectReason: null
-      }
-    ]
+  try {
+    // 这里应该替换为实际的API调用
+    // const response = await service.post('/borrowApplications/list', {
+    //   ...searchForm,
+    //   page: pagination.currentPage,
+    //   pageSize: pagination.pageSize
+    // })
     
-    // 更新总数
-    pagination.total = allApplications.value.length
-    loading.value = false
-  }, 800) // 模拟加载时间
+    // 模拟API响应
+    setTimeout(() => {
+      // 模拟数据
+      const mockData = generateMockData()
+      allApplications.value = mockData.records
+      pagination.total = mockData.total
+      
+      tableLoading.value = false
+    }, 500)
+  } catch (error) {
+    console.error('获取借阅申请失败:', error)
+    tableLoading.value = false
+  }
 }
+
+// 生成模拟数据
+const generateMockData = () => {
+  const records = []
+  const statuses = ['pending', 'approved', 'rejected']
+  const types = ['new', 'renewal', 'reservation']
+  
+  for (let i = 1; i <= 23; i++) {
+    // 应该根据搜索条件筛选数据
+    const status = statuses[Math.floor(Math.random() * statuses.length)]
+    
+    // 如果有状态筛选且不匹配，则跳过
+    if (searchForm.status && searchForm.status !== status) continue
+    
+    // 如果有关键词筛选
+    if (searchForm.keyword && !`用户${i}`.includes(searchForm.keyword) && 
+        !`图书标题${i}`.includes(searchForm.keyword)) continue
+    
+    records.push({
+      id: `BRQ-2023-${1000 + i}`,
+      userId: `USER${1000 + i}`,
+      userName: `用户${i}`,
+      bookId: `BOOK${2000 + i}`,
+      bookTitle: `图书标题${i}`,
+      applicationTime: new Date(2023, 5, i).toLocaleString(),
+      expectedReturnTime: new Date(2023, 6, i + 30).toLocaleString(),
+      status: status,
+      type: types[i % 3],
+      reason: `申请理由：这本书对我的学习/研究非常有帮助，希望能借阅/续借${i}天。`,
+      remark: status !== 'pending' ? `处理备注：${status === 'approved' ? '符合借阅条件，批准申请' : '库存不足，暂时无法借出'}` : ''
+    })
+  }
+  
+  // 分页处理
+  const start = (pagination.currentPage - 1) * pagination.pageSize
+  const end = start + pagination.pageSize
+  
+  return {
+    records: records.slice(start, end),
+    total: records.length
+  }
+}
+
+// 处理借阅申请
+const handleApplication = async (row, action) => {
+  const actionText = action === 'approve' ? '批准' : '拒绝'
+  const confirmMessage = action === 'approve' 
+    ? `确定批准用户 ${row.userName} 的借阅申请吗？`
+    : `确定拒绝用户 ${row.userName} 的借阅申请吗？请确保已告知用户拒绝原因。`
+  
+  ElMessageBox.confirm(confirmMessage, '操作确认', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: action === 'approve' ? 'success' : 'warning'
+  }).then(async () => {
+    loading.value = true
+    
+    try {
+      // 这里应该替换为实际的API调用
+      // await service.post(`/borrowApplications/${action}`, { id: row.id })
+      
+      // 模拟API调用
+      setTimeout(() => {
+        // 更新本地状态
+        const index = allApplications.value.findIndex(item => item.id === row.id)
+        if (index !== -1) {
+          allApplications.value[index].status = action === 'approve' ? 'approved' : 'rejected'
+          allApplications.value[index].remark = action === 'approve' 
+            ? '处理备注：符合借阅条件，批准申请' 
+            : '处理备注：库存不足，暂时无法借出'
+        }
+        
+        ElMessage({
+          type: 'success',
+          message: `已${actionText}借阅申请`
+        })
+        
+        loading.value = false
+      }, 500)
+    } catch (error) {
+      console.error(`${actionText}借阅申请失败:`, error)
+      ElMessage.error(`${actionText}失败，请重试`)
+      loading.value = false
+    }
+  }).catch(() => {
+    // 用户取消操作
+  })
+}
+
+// 查看申请详情
+const viewApplicationDetail = (row) => {
+  ElMessageBox.alert(
+    `
+    <div class="application-detail">
+      <p><strong>申请编号：</strong>${row.id}</p>
+      <p><strong>用户信息：</strong>${row.userName} (${row.userId})</p>
+      <p><strong>图书信息：</strong>${row.bookTitle} (${row.bookId})</p>
+      <p><strong>申请类型：</strong>${getApplicationTypeLabel(row.type)}</p>
+      <p><strong>申请时间：</strong>${row.applicationTime}</p>
+      <p><strong>预计归还时间：</strong>${row.expectedReturnTime}</p>
+      <p><strong>申请状态：</strong>${getStatusLabel(row.status)}</p>
+      <p><strong>申请理由：</strong>${row.reason}</p>
+      ${row.remark ? `<p><strong>处理备注：</strong>${row.remark}</p>` : ''}
+    </div>
+    `,
+    '申请详情',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭'
+    }
+  )
+}
+
+// 获取状态标签
+const getStatusLabel = (status) => {
+  return statusOptions.find(option => option.value === status)?.label || status
+}
+
+// 获取申请类型标签
+const getApplicationTypeLabel = (type) => {
+  return applicationTypes.find(option => option.value === type)?.label || type
+}
+
+// 申请类型选项
+const applicationTypes = [
+  { value: 'new', label: '新借阅' },
+  { value: 'renewal', label: '续借' },
+  { value: 'reservation', label: '预约' }
+]
 
 onMounted(() => {
   fetchApplications()
@@ -351,7 +416,7 @@ onMounted(() => {
             v-model="searchForm.keyword" 
             placeholder="书名/申请人/编号" 
             clearable
-            @keyup.enter="handleSearch"
+            @keyup.enter="fetchApplications"
             :prefix-icon="Search"
             class="custom-input"
           />
@@ -387,7 +452,7 @@ onMounted(() => {
         </el-form-item>
         
         <el-form-item>
-          <el-button type="primary" @click="handleSearch" class="search-button">
+          <el-button type="primary" @click="fetchApplications" class="search-button">
             <el-icon><Search /></el-icon>搜索
           </el-button>
           <el-button @click="resetSearch" class="reset-button">
@@ -408,7 +473,7 @@ onMounted(() => {
         :data="tableData" 
         style="width: 100%" 
         border 
-        v-loading="loading"
+        v-loading="tableLoading"
         row-key="applicationId"
         :header-cell-style="{backgroundColor: '#f9f6f2', color: '#3d2c29', fontWeight: 'bold'}"
         :row-class-name="tableRowClassName"
@@ -475,7 +540,7 @@ onMounted(() => {
                   type="primary" 
                   size="small" 
                   circle
-                  @click="viewApplication(scope.row)"
+                  @click="viewApplicationDetail(scope.row)"
                   class="action-button view-button"
                 >
                   <el-icon><View /></el-icon>
@@ -488,10 +553,10 @@ onMounted(() => {
                     type="success" 
                     size="small" 
                     circle
-                    @click="approveApplication(scope.row)"
+                    @click="handleApplication(scope.row, 'approve')"
                     class="action-button approve-button"
                   >
-                    <el-icon><CheckCircle /></el-icon>
+                    <el-icon><Check /></el-icon>
                   </el-button>
                 </el-tooltip>
                 
@@ -500,10 +565,10 @@ onMounted(() => {
                     type="danger" 
                     size="small" 
                     circle
-                    @click="rejectApplication(scope.row)"
+                    @click="handleApplication(scope.row, 'reject')"
                     class="action-button reject-button"
                   >
-                    <el-icon><CircleCloseFilled /></el-icon>
+                    <el-icon><CircleClose /></el-icon>
                   </el-button>
                 </el-tooltip>
               </template>
@@ -534,7 +599,7 @@ onMounted(() => {
     
     <!-- 无数据提示 -->
     <el-empty 
-      v-if="filteredApplications.length === 0 && !loading" 
+      v-if="filteredApplications.length === 0 && !tableLoading" 
       description="暂无借阅申请" 
       class="empty-data"
     />

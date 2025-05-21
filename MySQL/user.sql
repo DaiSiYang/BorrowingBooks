@@ -114,3 +114,4 @@ INSERT INTO `permission` (`role_id`, `role_name`, `permission_code`, `permission
                                                                                                                          (2, '普通用户', 'book:view', '查看图书', '查看图书列表', 0),
                                                                                                                          (2, '普通用户', 'book:borrow', '借阅图书', '借阅图书', 0),
                                                                                                                          (2, '普通用户', 'book:return', '归还图书', '归还图书', 0);
+
