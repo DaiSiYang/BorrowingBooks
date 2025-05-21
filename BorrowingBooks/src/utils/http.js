@@ -69,6 +69,16 @@ service.interceptors.response.use(
                         router.replace({ name: 'login' });
                     });
                     break;
+                case 403:
+                    ElMessage.error('登录已过期，请重新登录');
+                    // 清除 token 并跳转到登录页
+                    const tokenStore403 = useTokenStore();
+                    tokenStore403.clearToken();
+                    // 使用 router 实例进行导航
+                    import('@/router').then(({ default: router }) => {
+                        router.replace({ name: 'login' });
+                    });
+                    break;
                 case 500:
                     ElMessage.error('服务器异常，请稍后重试');
                     break;
