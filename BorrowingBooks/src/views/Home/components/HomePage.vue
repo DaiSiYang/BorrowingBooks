@@ -1,6 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import {Calendar, Document, Refresh, Star, Warning, Search, Reading, InfoFilled} from "@element-plus/icons-vue";
+import { HotBookCarouselAPI, HotBooksListAPI, BookDetailAPI } from '@/api/Book.js';
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+
+// 路由实例
+const router = useRouter()
 
 // 获取当前时间
 const currentTime = ref(new Date())
@@ -18,6 +24,44 @@ const setGreeting = () => {
   } else {
     greeting.value = '晚上好'
   }
+}
+
+// 前往图书详情页
+const goToBookDetail = (book) => {
+  router.push({
+    name: 'bookDetail',
+    params: { id: book.id }
+  })
+}
+
+// 图书详情对话框
+const bookDetailVisible = ref(false)
+const bookDetail = ref({})
+const bookDetailLoading = ref(false)
+
+// 获取图书详情
+const fetchBookDetail = async (id) => {
+  try {
+    bookDetailLoading.value = true
+    const { data } = await BookDetailAPI(id)
+    bookDetail.value = data || {}
+    bookDetailVisible.value = true
+  } catch (error) {
+    console.error('获取图书详情失败:', error)
+    ElMessage.error('获取图书详情失败，请稍后再试')
+  } finally {
+    bookDetailLoading.value = false
+  }
+}
+
+// 打开图书详情
+const openBookDetail = (book) => {
+  // 如果后端接口可用，则调用API获取详情
+  // fetchBookDetail(book.id)
+  
+  // 临时使用前端数据，后续接口就绪后替换为上面的API调用
+  bookDetail.value = { ...book }
+  bookDetailVisible.value = true
 }
 
 // 借阅规则数据
@@ -50,40 +94,53 @@ const borrowRules = ref([
 ])
 
 // 热门图书数据
-const popularBooks = ref([
-  { 
-    id: 1, 
-    title: '活着', 
-    author: '余华', 
-    cover: 'book1.jpg',
-    rating: 9.4,
-    desc: '讲述了一个人历经世间沧桑和种种磨难的人生故事，揭示了人如何面对荒谬的命运。'
-  },
-  { 
-    id: 2, 
-    title: '三体', 
-    author: '刘慈欣', 
-    cover: 'book2.jpg',
-    rating: 9.3,
-    desc: '描绘了人类文明与三体文明的信息交流、生死搏杀及两个文明若干次的生死存亡的历程。'
-  },
-  { 
-    id: 3, 
-    title: '平凡的世界', 
-    author: '路遥', 
-    cover: 'book3.jpg',
-    rating: 9.0,
-    desc: '展现了中国社会从70年代到80年代期间，普通人在大时代背景下的命运变迁。'
-  },
-  { 
-    id: 4, 
-    title: '围城', 
-    author: '钱钟书', 
-    cover: 'book4.jpg',
-    rating: 8.9,
-    desc: '刻画了一幅20世纪30年代中期知识分子的群像，围城是结婚的人想逃出去，未婚的人想挤进去。'
+const popularBooks = ref([])
+const carouselBooks = ref([])
+
+// 获取热门图书数据
+const fetchHotBooks = async () => {
+  try {
+    const response = await HotBooksListAPI()
+    console.log('热门图书数据:', response)
+    const { data: hotBooksData } = response
+    popularBooks.value = hotBooksData || []
+  } catch (error) {
+    console.error('获取热门图书列表失败:', error)
+    // 设置默认数据，防止页面报错
+    popularBooks.value = [
+      { 
+        id: 1, 
+        title: '活着', 
+        author: '余华', 
+        cover: 'book1.jpg',
+        rating: 9.4,
+        desc: '讲述了一个人历经世间沧桑和种种磨难的人生故事，揭示了人如何面对荒谬的命运。'
+      },
+      { 
+        id: 2, 
+        title: '三体', 
+        author: '刘慈欣', 
+        cover: 'book2.jpg',
+        rating: 9.3,
+        desc: '描绘了人类文明与三体文明的信息交流、生死搏杀及两个文明若干次的生死存亡的历程。'
+      }
+    ]
   }
-])
+}
+
+// 获取轮播图数据
+const fetchCarouselBooks = async () => {
+  try {
+    const response = await HotBookCarouselAPI()
+    console.log('热门图书轮播图数据:', response)
+    const { data: carouselData } = response
+    carouselBooks.value = carouselData || []
+  } catch (error) {
+    console.error('获取热门图书轮播图数据失败:', error)
+    // 使用热门图书数据作为备用
+    carouselBooks.value = popularBooks.value
+  }
+}
 
 onMounted(() => {
   setGreeting()
@@ -92,6 +149,10 @@ onMounted(() => {
     currentTime.value = new Date()
     setGreeting()
   }, 60000)
+  
+  // 获取热门图书数据和轮播图数据
+  fetchHotBooks()
+  fetchCarouselBooks()
 })
 </script>
 
@@ -192,17 +253,17 @@ onMounted(() => {
     <div class="popular-section">
       <h2 class="section-title">热门图书</h2>
       
-      <el-carousel :interval="4000" type="card" height="380px" class="book-carousel">
-        <el-carousel-item v-for="book in popularBooks" :key="book.id" class="carousel-item">
+      <el-carousel :interval="4000" type="card" height="380px" class="book-carousel" v-loading="!carouselBooks.length">
+        <el-carousel-item v-for="book in carouselBooks" :key="book.id" class="carousel-item">
           <div class="featured-book-card">
             <div class="book-cover">
-              <img :src="`@/assets/Image/${book.cover}`" :alt="book.title" />
+              <img src="@/assets/Image/图书封面.png" :alt="book.title" />
               <div class="book-rank">
                 <span class="rank-number">{{ book.id }}</span>
               </div>
               <div class="book-rating">
                 <el-rate
-                  v-model="book.rating"
+                  :model-value="book.rating"
                   disabled
                   :colors="['#ffd21e', '#ffd21e', '#ffd21e']"
                   score-template="{value}"
@@ -219,7 +280,7 @@ onMounted(() => {
                 <el-button type="primary" round>
                   <el-icon><Reading /></el-icon> 借阅
                 </el-button>
-                <el-button type="info" round>
+                <el-button type="info" round @click="goToBookDetail(book)">
                   <el-icon><InfoFilled /></el-icon> 详情
                 </el-button>
               </div>
@@ -228,16 +289,19 @@ onMounted(() => {
         </el-carousel-item>
       </el-carousel>
       
-      <div class="popular-books">
+      <div class="popular-books" v-loading="!popularBooks.length">
         <div v-for="book in popularBooks" :key="book.id" class="book-card">
           <div class="book-inner">
             <div class="book-cover">
-              <img :src="`@/assets/Image/${book.cover}`" :alt="book.title" />
+              <img src="@/assets/Image/图书封面.png" :alt="book.title" />
               <div class="book-hover-info">
                 <p class="book-desc-preview">{{ book.desc }}</p>
                 <div class="book-actions">
                   <el-button type="primary" round size="small">
                     <el-icon><Reading /></el-icon> 借阅
+                  </el-button>
+                  <el-button type="info" round size="small" @click="goToBookDetail(book)">
+                    <el-icon><InfoFilled /></el-icon> 详情
                   </el-button>
                 </div>
               </div>
@@ -250,7 +314,7 @@ onMounted(() => {
               <p class="book-author">作者：{{ book.author }}</p>
               <div class="book-rating">
                 <el-rate
-                  v-model="book.rating"
+                  :model-value="book.rating"
                   disabled
                   :colors="['#ffd21e', '#ffd21e', '#ffd21e']"
                   show-score
@@ -265,6 +329,71 @@ onMounted(() => {
       </div>
     </div>
   </div>
+  
+  <!-- 图书详情对话框 -->
+  <el-dialog
+    v-model="bookDetailVisible"
+    title="图书详情"
+    width="60%"
+    destroy-on-close
+    :close-on-click-modal="false"
+    class="book-detail-dialog"
+  >
+    <el-skeleton :rows="10" animated v-if="bookDetailLoading" />
+    <div v-else class="book-detail-content">
+      <div class="book-detail-header">
+        <div class="book-cover">
+          <img src="@/assets/Image/图书封面.png" :alt="bookDetail.title" />
+        </div>
+        <div class="book-info">
+          <h2 class="book-title">{{ bookDetail.title }}</h2>
+          <div class="book-meta">
+            <p><span class="label">作者：</span>{{ bookDetail.author }}</p>
+            <p><span class="label">出版社：</span>{{ bookDetail.publisher || '未知' }}</p>
+            <p><span class="label">出版日期：</span>{{ bookDetail.publishDate || '未知' }}</p>
+            <p><span class="label">ISBN：</span>{{ bookDetail.isbn || '未知' }}</p>
+            <p><span class="label">分类：</span>{{ bookDetail.category || '未知' }}</p>
+          </div>
+          <div class="book-rating">
+            <span class="label">评分：</span>
+            <el-rate
+              :model-value="bookDetail.rating"
+              disabled
+              :colors="['#ffd21e', '#ffd21e', '#ffd21e']"
+              show-score
+              text-color="#e36049"
+              score-template="{value}"
+            ></el-rate>
+            <span class="rating-value">{{ bookDetail.rating }}</span>
+          </div>
+          <div class="book-actions">
+            <el-button type="primary" icon="Reading">借阅此书</el-button>
+            <el-button type="success" icon="Star">加入收藏</el-button>
+          </div>
+        </div>
+      </div>
+      <div class="book-description">
+        <h3>图书简介</h3>
+        <p>{{ bookDetail.desc || '暂无简介' }}</p>
+      </div>
+      <div class="book-status">
+        <h3>在馆状态</h3>
+        <el-descriptions :column="3" border>
+          <el-descriptions-item label="在馆数量">{{ bookDetail.stockCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="可借数量">{{ bookDetail.availableCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="借阅次数">{{ bookDetail.borrowedCount || 0 }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="bookDetailVisible = false">关闭</el-button>
+        <el-button type="primary" @click="bookDetailVisible = false">
+          确定
+        </el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -696,7 +825,7 @@ onMounted(() => {
     margin-bottom: 50px;
     
     .book-carousel {
-      margin-bottom: 30px;
+      margin-bottom: 60px;
       
       .carousel-item {
         cursor: pointer;
@@ -794,8 +923,9 @@ onMounted(() => {
     
     .popular-books {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 25px;
+      margin-top: 20px;
       
       .book-card {
         cursor: pointer;
@@ -951,6 +1081,22 @@ onMounted(() => {
 }
 
 // 响应式调整
+@media (max-width: 1400px) {
+  .popular-section {
+    .popular-books {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .popular-section {
+    .popular-books {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
 @media (max-width: 768px) {
   .welcome-section {
     flex-direction: column;
@@ -995,6 +1141,138 @@ onMounted(() => {
         
         .book-cover {
           height: 220px;
+        }
+      }
+    }
+  }
+}
+
+// 图书详情对话框样式
+:deep(.book-detail-dialog) {
+  .el-dialog__body {
+    padding: 30px;
+  }
+  
+  .book-detail-content {
+    .book-detail-header {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 30px;
+      
+      .book-cover {
+        width: 200px;
+        height: 280px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+      
+      .book-info {
+        flex-grow: 1;
+        
+        .book-title {
+          font-size: 24px;
+          color: #3d2c29;
+          margin-bottom: 15px;
+          font-weight: 600;
+        }
+        
+        .book-meta {
+          margin-bottom: 20px;
+          
+          p {
+            margin: 8px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          
+          .label {
+            color: #8a5f41;
+            font-weight: 600;
+            margin-right: 5px;
+          }
+        }
+        
+        .book-rating {
+          margin-bottom: 25px;
+          display: flex;
+          align-items: center;
+          
+          .label {
+            color: #8a5f41;
+            font-weight: 600;
+            margin-right: 10px;
+          }
+          
+          .rating-value {
+            margin-left: 10px;
+            font-weight: bold;
+            color: #e36049;
+          }
+        }
+        
+        .book-actions {
+          display: flex;
+          gap: 15px;
+        }
+      }
+    }
+    
+    .book-description {
+      margin-bottom: 30px;
+      
+      h3 {
+        font-size: 18px;
+        color: #3d2c29;
+        margin-bottom: 15px;
+        position: relative;
+        padding-left: 12px;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 4px;
+          height: 18px;
+          background: #8a5f41;
+          border-radius: 2px;
+        }
+      }
+      
+      p {
+        color: #666;
+        line-height: 1.8;
+        text-align: justify;
+      }
+    }
+    
+    .book-status {
+      h3 {
+        font-size: 18px;
+        color: #3d2c29;
+        margin-bottom: 15px;
+        position: relative;
+        padding-left: 12px;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 4px;
+          height: 18px;
+          background: #8a5f41;
+          border-radius: 2px;
         }
       }
     }

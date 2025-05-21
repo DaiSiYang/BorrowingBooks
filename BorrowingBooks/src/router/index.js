@@ -58,6 +58,15 @@ const router = createRouter({
           component: () => import('@/views/Home/components/BookList.vue')
         },
         {
+          path: 'book-detail/:id',
+          name: 'bookDetail',
+          component: () => import('@/views/Book/BookDetail.vue'),
+          meta: {
+            title: '图书详情',
+            requireAuth: true
+          }
+        },
+        {
           path: 'add-book',
           name: 'addBook',
           component: () => import('@/views/Home/components/AddBook.vue')
