@@ -11,7 +11,7 @@ const router = useRouter()
 const handleImageError = (e) => {
   console.error('图片加载失败:', e);
   // 设置默认图片
-  e.target.src = '/src/assets/default-book.jpg'; // 请确保这个路径是正确的
+  e.target.src = '/src/assets/Image/图书封面.png'; // 使用更可靠的默认图片路径
 }
 
 // 添加视图模式变量
@@ -264,10 +264,10 @@ const handleSaveEdit = async () => {
             allBooks.value[index] = updatedBook
           }
           
-          ElMessage({
+  ElMessage({
             type: 'success',
             message: `成功更新《${editForm.title}》的信息`
-          })
+  })
           
           // 刷新图书列表
           fetchAllBooks()
@@ -349,22 +349,12 @@ const fetchAllBooks = async () => {
     if (result && result.data) {
       // 处理后端返回的图书数据，添加必要的字段
       allBooks.value = result.data.map(book => {
-        // 处理图片URL，确保没有多余的引号
-        let coverUrl = book.coverImage;
-        if (coverUrl) {
-          // 移除可能存在的多余引号
-          coverUrl = coverUrl.replace(/^["'\s]+|["'\s]+$/g, '');
-          
-          // 由于豆瓣图片有防盗链，直接使用本地默认图片
-          coverUrl = '/src/assets/default-book.jpg'; // 请确保这个路径是正确的
-        }
-        
         // 获取状态信息
         const statusInfo = getStatusInfo(book.status);
         
         return {
           ...book,
-          // 使用处理后的图片URL
+          // 统一使用固定的图书封面图片
           coverImage: '/src/assets/Image/图书封面.png',
           // 使用status字段判断是否可借（只有status为1时才可借）
           inStock: book.status === 1,

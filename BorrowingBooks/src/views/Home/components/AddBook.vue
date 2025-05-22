@@ -30,93 +30,93 @@
             <span>基本信息</span>
           </div>
           
-          <el-row :gutter="30">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="书名" prop="title">
-                <el-input 
-                  v-model="bookForm.title" 
-                  placeholder="请输入书名"
-                  :prefix-icon="Document"
-                  class="custom-input"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="作者" prop="author">
-                <el-input 
-                  v-model="bookForm.author" 
-                  placeholder="请输入作者"
-                  :prefix-icon="User"
-                  class="custom-input"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="30">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="出版社" prop="publisher">
-                <el-input 
-                  v-model="bookForm.publisher" 
-                  placeholder="请输入出版社"
-                  :prefix-icon="OfficeBuilding"
-                  class="custom-input"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="ISBN" prop="isbn">
-                <el-input 
-                  v-model="bookForm.isbn" 
-                  placeholder="请输入ISBN"
-                  :prefix-icon="Ticket"
-                  class="custom-input"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="30">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="分类" prop="category">
-                <el-select 
-                  v-model="bookForm.category" 
-                  placeholder="请选择分类" 
-                  style="width: 100%"
-                  class="custom-select"
-                >
-                  <el-option 
-                    v-for="item in categoryOptions" 
-                    :key="item.value" 
-                    :label="item.label" 
-                    :value="item.value" 
+        <el-row :gutter="30">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="书名" prop="title">
+                  <el-input 
+                    v-model="bookForm.title" 
+                    placeholder="请输入书名"
+                    :prefix-icon="Document"
+                    class="custom-input"
                   />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="出版日期" prop="publishDate">
-                <el-date-picker
-                  v-model="bookForm.publishDate"
-                  type="date"
-                  placeholder="选择出版日期"
-                  style="width: 100%"
-                  value-format="YYYY-MM-DD"
-                  class="custom-date-picker"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="作者" prop="author">
+                  <el-input 
+                    v-model="bookForm.author" 
+                    placeholder="请输入作者"
+                    :prefix-icon="User"
+                    class="custom-input"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+          <el-row :gutter="30">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="出版社" prop="publisher">
+                  <el-input 
+                    v-model="bookForm.publisher" 
+                    placeholder="请输入出版社"
+                    :prefix-icon="OfficeBuilding"
+                    class="custom-input"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="ISBN" prop="isbn">
+                  <el-input 
+                    v-model="bookForm.isbn" 
+                    placeholder="请输入ISBN"
+                    :prefix-icon="Ticket"
+                    class="custom-input"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+          <el-row :gutter="30">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="分类" prop="category">
+                  <el-select 
+                    v-model="bookForm.category" 
+                    placeholder="请选择分类" 
+                    style="width: 100%"
+                    class="custom-select"
+                  >
+                    <el-option 
+                      v-for="item in categoryOptions" 
+                      :key="item.value" 
+                      :label="item.label" 
+                      :value="item.value" 
+                    />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="出版日期" prop="publishDate">
+                  <el-date-picker
+                    v-model="bookForm.publishDate"
+                    type="date"
+                    placeholder="选择出版日期"
+                    style="width: 100%"
+                    value-format="YYYY-MM-DD"
+                    class="custom-date-picker"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
 
           <el-row :gutter="30">
             <el-col :xs="24" :sm="12">
-              <el-form-item label="馆藏数量" prop="totalCopies">
-                <el-input-number 
-                  v-model="bookForm.totalCopies" 
-                  :min="1" 
-                  :max="999"
-                  class="custom-input-number"
-                  style="width: 100%"
+                <el-form-item label="馆藏数量" prop="totalCopies">
+                  <el-input-number 
+                    v-model="bookForm.totalCopies" 
+                    :min="1" 
+                    :max="999"
+                    class="custom-input-number"
+                    style="width: 100%"
                   controls-position="right"
                 />
               </el-form-item>
@@ -128,10 +128,10 @@
                   placeholder="请输入馆藏位置"
                   :prefix-icon="Location"
                   class="custom-input"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
         </div>
         
         <!-- 第二步：详细描述 -->
@@ -147,14 +147,14 @@
             :closable="false"
             class="description-tip"
           />
-          
-          <el-form-item label="图书简介" prop="description">
-            <el-input 
-              v-model="bookForm.description" 
-              type="textarea" 
+
+            <el-form-item label="图书简介" prop="description">
+              <el-input 
+                v-model="bookForm.description" 
+                type="textarea" 
               :rows="8" 
-              placeholder="请输入图书简介"
-              class="custom-textarea"
+                placeholder="请输入图书简介"
+                class="custom-textarea"
               show-word-limit
               maxlength="1000"
             />
@@ -167,8 +167,8 @@
               :rows="6" 
               placeholder="请输入图书目录"
               class="custom-textarea"
-            />
-          </el-form-item>
+              />
+            </el-form-item>
         </div>
         
         <!-- 第三步：封面上传 -->
@@ -181,22 +181,22 @@
           <div class="upload-section">
             <el-row :gutter="30">
               <el-col :xs="24" :sm="14" :md="14">
-                <el-form-item label="封面图片" prop="cover" class="cover-upload">
-                  <div class="upload-container">
-                    <el-upload
-                      class="cover-uploader"
-                      action="#"
-                      :http-request="handleUpload"
-                      :show-file-list="false"
-                      :before-upload="beforeUpload"
+                <el-form-item label="封面图片" prop="coverImage" class="cover-upload">
+              <div class="upload-container">
+                <el-upload
+                  class="cover-uploader"
+                  action="#"
+                  :http-request="handleUpload"
+                  :show-file-list="false"
+                  :before-upload="beforeUpload"
                       drag
-                    >
-                      <div class="upload-area">
-                        <img v-if="imageUrl" :src="imageUrl" class="cover-image" />
-                        <div v-else class="upload-placeholder">
+                >
+                  <div class="upload-area">
+                    <img v-if="imageUrl" :src="imageUrl" class="cover-image" />
+                    <div v-else class="upload-placeholder">
                           <el-icon class="upload-icon"><Picture /></el-icon>
                           <div class="upload-text">拖拽图片到此处或点击上传</div>
-                          <div class="upload-hint">建议尺寸: 300x400像素<br>JPG/PNG格式, 不超过2MB</div>
+                          <div class="upload-hint">建议尺寸: 300x400像素<br>JPG/PNG格式, 不超过50MB</div>
                         </div>
                       </div>
                     </el-upload>
@@ -238,8 +238,8 @@
                     </div>
                   </div>
                 </div>
-              </el-col>
-            </el-row>
+          </el-col>
+        </el-row>
           </div>
         </div>
 
@@ -251,9 +251,9 @@
           </div>
           
           <div class="right-actions">
-            <el-button @click="resetForm" class="reset-button">
-              <el-icon><RefreshRight /></el-icon>重置
-            </el-button>
+          <el-button @click="resetForm" class="reset-button">
+            <el-icon><RefreshRight /></el-icon>重置
+          </el-button>
             
             <template v-if="activeStep < 3">
               <el-button type="primary" @click="nextStep" class="next-button">
@@ -261,9 +261,9 @@
               </el-button>
             </template>
             <template v-else>
-              <el-button type="success" @click="submitForm" class="submit-button">
-                <el-icon><Check /></el-icon>保存图书
-              </el-button>
+              <el-button type="success" @click="submitForm" :loading="loading" class="submit-button">
+                <el-icon v-if="!loading"><Check /></el-icon>保存图书
+          </el-button>
             </template>
           </div>
         </div>
@@ -278,8 +278,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
+import { useTokenStore } from '@/stores/tokenStore.js'
+import { AddBookAPI } from '@/api/Book.js'
 import { 
-  ArrowLeft,
+  ArrowLeft, 
   ArrowRight, 
   Document, 
   User, 
@@ -302,6 +305,7 @@ const router = useRouter()
 const bookFormRef = ref(null)
 const imageUrl = ref('')
 const activeStep = ref(1)
+const loading = ref(false)
 
 // 分类选项
 const categoryOptions = [
@@ -324,7 +328,7 @@ const bookForm = reactive({
   description: '',
   catalog: '',
   location: '',
-  cover: ''
+  coverImage: ''
 })
 
 // 表单验证规则
@@ -341,8 +345,7 @@ const rules = {
     { required: true, message: '请输入出版社', trigger: 'blur' }
   ],
   isbn: [
-    { required: true, message: '请输入ISBN', trigger: 'blur' },
-    { pattern: /^(?:\d[- ]?){9}[\dX]$|^(?:\d[- ]?){13}$/, message: 'ISBN格式不正确', trigger: 'blur' }
+    { required: true, message: '请输入ISBN', trigger: 'blur' }
   ],
   category: [
     { required: true, message: '请选择分类', trigger: 'change' }
@@ -367,14 +370,18 @@ const goBack = () => {
 // 下一步
 const nextStep = () => {
   if (activeStep.value === 1) {
-    bookFormRef.value.validateField(['title', 'author', 'publisher', 'isbn', 'category', 'publishDate', 'totalCopies', 'location'], (valid) => {
-      if (!valid) {
+    // 使用完整的validate方法进行验证
+    bookFormRef.value.validate((valid) => {
+      if (valid) {
+        // 验证通过，进入下一步
         activeStep.value++
       } else {
+        // 验证失败，提示用户
         ElMessage.warning('请完善表单信息后继续')
       }
     })
   } else {
+    // 不是第一步，直接进入下一步
     activeStep.value++
   }
 }
@@ -388,14 +395,14 @@ const prevStep = () => {
 const beforeUpload = (file) => {
   const isJPG = file.type === 'image/jpeg'
   const isPNG = file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt50M = file.size / 1024 / 1024 < 50
 
   if (!isJPG && !isPNG) {
     ElMessage.error('封面图片只能是 JPG 或 PNG 格式!')
     return false
   }
-  if (!isLt2M) {
-    ElMessage.error('封面图片大小不能超过 2MB!')
+  if (!isLt50M) {
+    ElMessage.error('封面图片大小不能超过 50MB!')
     return false
   }
   return true
@@ -404,32 +411,82 @@ const beforeUpload = (file) => {
 // 处理上传
 const handleUpload = (options) => {
   const file = options.file
-  // 这里应该调用API上传文件，这里使用本地预览
+  // 创建FormData对象用于文件上传
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  // 使用axios上传文件到后端  
+  const tokenStore = useTokenStore()
+  
+  axios.post('http://localhost:8080/api/public/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${tokenStore.token}`
+    }
+  })
+  .then(response => {
+    console.log('上传成功:', response)
+    if (response.data && response.data.code === 200) {
+      // 设置图片URL和表单值
+      imageUrl.value = response.data.data // 或根据后端返回的数据结构调整
+      bookForm.coverImage = response.data.data // 使用后端返回的文件路径
+      ElMessage.success('图片上传成功!')
+    } else {
+      ElMessage.error('图片上传失败: ' + (response.data.message || '未知错误'))
+    }
+  })
+  .catch(error => {
+    console.error('上传失败:', error)
+    ElMessage.error('图片上传失败，请稍后再试')
+    
+    // 这里仍然保留本地预览功能，以便在API不可用时测试UI
   const reader = new FileReader()
   reader.readAsDataURL(file)
   reader.onload = () => {
     imageUrl.value = reader.result
-    bookForm.cover = file.name // 实际应用中应该是上传后的文件路径
+      bookForm.coverImage = file.name // 实际应用中应该是上传后的文件路径
   }
+  })
 }
 
 // 提交表单
-const submitForm = () => {
-  bookFormRef.value.validate((valid) => {
+const submitForm = async () => {
+  bookFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 这里应该调用API保存图书
-      console.log('提交的表单数据:', bookForm)
+      loading.value = true
+      try {
+        console.log('提交的表单数据:', bookForm) // 打印提交的数据
+        const response = await AddBookAPI(bookForm)
+        console.log('后端返回的响应:', response) // 打印后端响应
+        
+        // 放宽成功判断条件：只要有返回值就认为成功，因为后端已经提示插入成功
+        if (response) {
       ElMessage({
         type: 'success',
         message: '图书添加成功!'
       })
-      // 重置表单或跳转到列表页
+          // 重置表单并跳转到列表页
       resetForm()
-      router.push('/home/book-list')
+          router.push('/home/book-list')
+        } else {
+          ElMessage({
+            type: 'error',
+            message: '添加失败，请稍后再试'
+          })
+        }
+      } catch (error) {
+        console.error('添加图书出错:', error)
+        ElMessage({
+          type: 'error',
+          message: '添加图书失败：' + (error.message || '未知错误')
+        })
+      } finally {
+        loading.value = false
+      }
     } else {
       ElMessage({
         type: 'error',
-        message: '请完善表单信息!'
+        message: '请完善必填表单信息!'
       })
       return false
     }
@@ -587,30 +644,30 @@ const resetForm = () => {
       .upload-section {
         margin-top: 20px;
         
-        .cover-upload {
+      .cover-upload {
           margin-bottom: 0;
-          
-          .upload-container {
-            .cover-uploader {
-              width: 100%;
+        
+        .upload-container {
+          .cover-uploader {
+            width: 100%;
               
               :deep(.el-upload) {
                 width: 100%;
               }
               
               :deep(.el-upload-dragger) {
-                width: 100%;
-                height: 400px;
+              width: 100%;
+              height: 400px;
                 padding: 0;
-                display: flex;
+              display: flex;
                 align-items: center;
-                justify-content: center;
-                background-color: #f9f6f2;
+              justify-content: center;
+              background-color: #f9f6f2;
                 border: 2px dashed rgba(138, 95, 65, 0.3);
-                
-                &:hover {
-                  border-color: #8a5f41;
-                  background-color: #f5f0e8;
+              
+              &:hover {
+                border-color: #8a5f41;
+                background-color: #f5f0e8;
                 }
               }
               
@@ -625,38 +682,38 @@ const resetForm = () => {
                   width: 100%;
                   height: 100%;
                   object-fit: contain;
-                  border-radius: 8px;
-                }
-                
-                .upload-placeholder {
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  justify-content: center;
+                border-radius: 8px;
+              }
+              
+              .upload-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
                   padding: 30px;
                   
                   .upload-icon {
                     font-size: 60px;
                     color: #8a5f41;
                     margin-bottom: 20px;
-                  }
-                  
-                  .upload-text {
-                    font-size: 16px;
-                    color: #3d2c29;
-                    margin-bottom: 10px;
-                    font-weight: 500;
-                  }
-                  
-                  .upload-hint {
-                    font-size: 13px;
-                    color: #8a5f41;
-                    text-align: center;
-                    line-height: 1.5;
-                  }
+                }
+                
+                .upload-text {
+                  font-size: 16px;
+                  color: #3d2c29;
+                  margin-bottom: 10px;
+                  font-weight: 500;
+                }
+                
+                .upload-hint {
+                  font-size: 13px;
+                  color: #8a5f41;
+                  text-align: center;
+                  line-height: 1.5;
                 }
               }
             }
+          }
           }
         }
         
@@ -681,25 +738,25 @@ const resetForm = () => {
             margin: 0;
             
             li {
-              display: flex;
-              align-items: center;
+            display: flex;
+            align-items: center;
               margin-bottom: 12px;
-              
-              .el-icon {
-                font-size: 16px;
+            
+            .el-icon {
+              font-size: 16px;
                 color: #8a5f41;
-                margin-right: 8px;
+              margin-right: 8px;
                 flex-shrink: 0;
-              }
-              
-              span {
+            }
+            
+            span {
                 font-size: 14px;
                 color: #3d2c29;
                 line-height: 1.5;
-              }
-            }
           }
-          
+        }
+      }
+      
           .preview-section {
             margin-top: 30px;
             
@@ -724,7 +781,7 @@ const resetForm = () => {
                   width: 100%;
                   height: 100%;
                   object-fit: cover;
-                }
+        }
               }
               
               .book-card-info {
@@ -741,7 +798,7 @@ const resetForm = () => {
                 
                 .book-card-author {
                   font-size: 12px;
-                  color: #8a5f41;
+          color: #8a5f41;
                   margin: 0;
                 }
               }
@@ -778,30 +835,30 @@ const resetForm = () => {
         .right-actions {
           display: flex;
           gap: 12px;
+        
+        .reset-button {
+          border-color: #8a5f41;
+          color: #8a5f41;
+          border-radius: 8px;
+          transition: all 0.3s;
           
-          .reset-button {
-            border-color: #8a5f41;
-            color: #8a5f41;
-            border-radius: 8px;
-            transition: all 0.3s;
-            
-            &:hover {
-              background-color: rgba(138, 95, 65, 0.05);
-              transform: translateY(-2px);
-            }
-            
-            .el-icon {
-              margin-right: 6px;
-            }
+          &:hover {
+            background-color: rgba(138, 95, 65, 0.05);
+            transform: translateY(-2px);
           }
           
+          .el-icon {
+            margin-right: 6px;
+          }
+        }
+        
           .next-button {
             background-color: #4c8dae;
             border-color: #4c8dae;
-            border-radius: 8px;
-            transition: all 0.3s;
-            
-            &:hover {
+          border-radius: 8px;
+          transition: all 0.3s;
+          
+          &:hover {
               background-color: #3a7a99;
               transform: translateY(-2px);
             }
@@ -819,11 +876,11 @@ const resetForm = () => {
             
             &:hover {
               background-color: #5daf34;
-              transform: translateY(-2px);
-            }
-            
-            .el-icon {
-              margin-right: 6px;
+            transform: translateY(-2px);
+          }
+          
+          .el-icon {
+            margin-right: 6px;
             }
           }
         }

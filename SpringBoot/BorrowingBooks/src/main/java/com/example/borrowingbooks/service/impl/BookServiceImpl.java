@@ -152,7 +152,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
                     .userId(userId)
                     .bookId(Math.toIntExact(id))
                     .borrowDate(LocalDateTime.now())
-                    .returnDate(LocalDateTime.now().plusDays(7))
+                    .returnDate(LocalDateTime.now().plusDays(30))
                     .status(1)
                     .build();
             boolean save = borrowRecordService.save(build);
@@ -198,5 +198,27 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
         }
         log.info("图书 {} 更新失败", bookDTO.getId());
         return Result.fail("更新失败");
+    }
+
+    @Override
+    public Result<String> saveBook(BookDTO bookDTO) {
+        log.info("保存图书 {}", bookDTO);
+        if (bookDTO == null){
+            log.error("图书信息不存在");
+            return Result.fail("图书信息不存在");
+        }
+        Book book = new Book();
+        BeanUtils.copyProperties(bookDTO, book);
+        boolean save = this.save(book);
+        if (!save){
+            log.error("图书 {} 保存失败", bookDTO.getId());
+            return Result.fail("图书保存失败");
+        }
+        boolean delete = redis.delete(BOOK_LIST);
+        if (!delete){
+            log.error("删除缓存 {} 失败", BOOK_LIST);
+        }
+        log.info("添加成功");
+        return Result.ok("保存成功");
     }
 }

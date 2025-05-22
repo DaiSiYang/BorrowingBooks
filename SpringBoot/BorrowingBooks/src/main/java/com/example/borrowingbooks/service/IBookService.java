@@ -28,4 +28,6 @@ public interface IBookService extends IService<Book> {
     Result<String> deleteBook(Long id);
 
     Result<String> updateBook(BookDTO bookDTO);
+
+    Result<String> saveBook(BookDTO bookDTO);
 }

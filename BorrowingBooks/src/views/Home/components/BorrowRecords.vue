@@ -1,14 +1,16 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Search, RefreshLeft, View, StarFilled, DocumentCopy, Download, Calendar, Timer, Warning } from '@element-plus/icons-vue'
+import { Search, RefreshLeft, View, StarFilled, DocumentCopy, Download, Calendar, Timer, Warning, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { GetBorrowingRecordsAPI, RenewBookAPI, ReturnBookAPI, DeleteBorrowRecordAPI } from '@/api/Book.js'
 
-// 借阅状态选项
+// 借阅状态选项 - 与后端状态码对应
 const statusOptions = [
   { value: '', label: '全部状态' },
-  { value: 'borrowing', label: '借阅中' },
-  { value: 'returned', label: '已归还' },
-  { value: 'overdue', label: '已逾期' }
+  { value: '1', label: '借阅中' },
+  { value: '0', label: '已归还' },
+  { value: '2', label: '已逾期' },
+  { value: '3', label: '续借中' }
 ]
 
 // 时间范围选项
@@ -60,15 +62,16 @@ const filteredRecords = computed(() => {
   if (searchForm.keyword) {
     const keyword = searchForm.keyword.toLowerCase()
     result = result.filter(record => 
-      record.title.toLowerCase().includes(keyword) || 
-      record.borrower.toLowerCase().includes(keyword) || 
-      record.borrowId.toLowerCase().includes(keyword)
+      (record.bookName && record.bookName.toLowerCase().includes(keyword)) || 
+      (record.title && record.title.toLowerCase().includes(keyword)) || 
+      (record.borrower && record.borrower.toLowerCase().includes(keyword)) || 
+      (record.borrowId && record.borrowId.toLowerCase().includes(keyword))
     )
   }
   
   // 根据状态筛选
   if (searchForm.status) {
-    result = result.filter(record => record.status === searchForm.status)
+    result = result.filter(record => String(record.status) === searchForm.status)
   }
   
   // 根据时间范围筛选
@@ -89,43 +92,70 @@ const filteredRecords = computed(() => {
       end.setHours(23, 59, 59, 999) // 设置结束时间为当天最后一秒
       
       result = result.filter(record => {
+        if (!record.borrowDate) return false
         const borrowDate = new Date(record.borrowDate)
         return borrowDate >= start && borrowDate <= end
       })
-      
-      // 更新分页信息并直接返回结果
-      pagination.total = result.length
-      return result
-    }
-    
-    // 非自定义时间的筛选
-    if (searchForm.timeRange !== 'custom') {
+    } else if (searchForm.timeRange !== 'custom') {
+      // 非自定义时间的筛选
       result = result.filter(record => {
+        if (!record.borrowDate) return false
         const borrowDate = new Date(record.borrowDate)
         return borrowDate >= startDate && borrowDate <= now
       })
     }
   }
   
-  // 更新分页信息
-  pagination.total = result.length
-  
   return result
 })
 
-// 表格显示的数据
+// 表格显示的数据 - 前端分页
 const tableData = computed(() => {
   const start = (pagination.currentPage - 1) * pagination.pageSize
   const end = start + pagination.pageSize
+  // 更新总数量
+  pagination.total = filteredRecords.value.length
   return filteredRecords.value.slice(start, end)
 })
 
-// 处理搜索
+// 模拟获取借阅记录数据
+const fetchBorrowRecords = async () => {
+  loading.value = true
+  
+  try {
+    // 调用API获取数据
+    const response = await GetBorrowingRecordsAPI();
+    console.log('借阅记录API响应数据:', response);
+    
+    // 检查API响应是否成功
+    if (response && response.code === 200) {
+      // 获取所有记录
+      const records = response.data || [];
+      allRecords.value = records;
+      
+      // 更新总数
+      pagination.total = records.length;
+    } else {
+      ElMessage.error(response?.msg || '获取借阅记录失败');
+      allRecords.value = [];
+      pagination.total = 0;
+    }
+  } catch (error) {
+    console.error('获取借阅记录出错:', error);
+    ElMessage.error('获取借阅记录失败，请稍后重试');
+    allRecords.value = [];
+    pagination.total = 0;
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 处理搜索 - 前端过滤
 const handleSearch = () => {
   pagination.currentPage = 1
 }
 
-// 重置搜索
+// 重置搜索 - 前端过滤
 const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.status = ''
@@ -135,15 +165,17 @@ const resetSearch = () => {
   pagination.currentPage = 1
 }
 
-// 处理分页变化
+// 处理分页变化 - 前端分页处理
 const handleCurrentChange = (val) => {
-  pagination.currentPage = val
+  pagination.currentPage = val;
+  // 不再调用API
 }
 
-// 处理每页显示数量变化
+// 处理每页显示数量变化 - 前端分页处理
 const handleSizeChange = (val) => {
-  pagination.pageSize = val
-  pagination.currentPage = 1
+  pagination.pageSize = val;
+  pagination.currentPage = 1;
+  // 不再调用API
 }
 
 // 查看借阅详情
@@ -157,7 +189,7 @@ const viewRecord = (row) => {
 }
 
 // 续借图书
-const renewBook = (row) => {
+const renewBook = async (row) => {
   // 检查是否可以续借
   if (row.renewCount >= row.maxRenewCount) {
     ElMessage({
@@ -175,30 +207,33 @@ const renewBook = (row) => {
       cancelButtonText: '取消',
       type: 'info'
     }
-  ).then(() => {
-    // 模拟续借成功，实际应该调用API
-    const index = allRecords.value.findIndex(record => record.borrowId === row.borrowId)
-    if (index !== -1) {
-      const record = allRecords.value[index]
+  ).then(async () => {
+    try {
+      loading.value = true;
+      const response = await RenewBookAPI(row.borrowId);
+      console.log('续借图书API响应:', response);
       
-      // 更新归还日期（增加15天）
-      const returnDate = new Date(record.returnDate)
-      returnDate.setDate(returnDate.getDate() + 15)
-      record.returnDate = formatDate(returnDate)
-      
-      // 更新续借次数
-      record.renewCount++
-      
-      ElMessage({
-        type: 'success',
-        message: `续借成功，新的归还日期为 ${record.returnDate}`
-      })
+      if (response && response.code === 200) {
+        ElMessage({
+          type: 'success',
+          message: response.msg || `续借成功，新的归还日期为 ${response.data?.newReturnDate || '已更新'}`
+        });
+        // 重新获取最新的借阅记录数据
+        fetchBorrowRecords();
+      } else {
+        ElMessage.error(response?.msg || '续借失败');
+      }
+    } catch (error) {
+      console.error('续借图书出错:', error);
+      ElMessage.error('续借失败，请稍后重试');
+    } finally {
+      loading.value = false;
     }
-  }).catch(() => {})
+  }).catch(() => {});
 }
 
 // 归还图书
-const returnBook = (row) => {
+const returnBook = async (row) => {
   ElMessageBox.confirm(
     `确定要归还《${row.title}》吗？`,
     '归还确认',
@@ -207,21 +242,29 @@ const returnBook = (row) => {
       cancelButtonText: '取消',
       type: 'info'
     }
-  ).then(() => {
-    // 模拟归还成功，实际应该调用API
-    const index = allRecords.value.findIndex(record => record.borrowId === row.borrowId)
-    if (index !== -1) {
-      // 更新状态为已归还
-      allRecords.value[index].status = 'returned'
-      // 设置实际归还日期为今天
-      allRecords.value[index].actualReturnDate = formatDate(new Date())
+  ).then(async () => {
+    try {
+      loading.value = true;
+      const response = await ReturnBookAPI(row.borrowId);
+      console.log('归还图书API响应:', response);
       
-      ElMessage({
-        type: 'success',
-        message: '图书归还成功'
-      })
+      if (response && response.code === 200) {
+        ElMessage({
+          type: 'success',
+          message: response.msg || '图书归还成功'
+        });
+        // 重新获取最新的借阅记录数据
+        fetchBorrowRecords();
+      } else {
+        ElMessage.error(response?.msg || '归还失败');
+      }
+    } catch (error) {
+      console.error('归还图书出错:', error);
+      ElMessage.error('归还失败，请稍后重试');
+    } finally {
+      loading.value = false;
     }
-  }).catch(() => {})
+  }).catch(() => {});
 }
 
 // 导出借阅记录
@@ -234,39 +277,51 @@ const exportRecords = () => {
 
 // 表格行样式
 const tableRowClassName = ({ row }) => {
-  if (row.status === 'overdue') {
+  if (String(row.status) === '2') {
     return 'overdue-row'
-  } else if (row.status === 'returned') {
+  } else if (String(row.status) === '0') {
     return 'returned-row'
   }
   return ''
 }
 
-// 格式化日期
-const formatDate = (date) => {
-  if (!date) return ''
-  if (typeof date === 'string') date = new Date(date)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
 // 获取状态标签类型
 const getStatusType = (status) => {
-  switch (status) {
-    case 'borrowing': return 'primary'
-    case 'returned': return 'success'
-    case 'overdue': return 'danger'
+  // 确保status是字符串形式，以便比较
+  const statusStr = String(status)
+  switch (statusStr) {
+    case '1': return 'primary' // 借阅中
+    case '0': return 'success' // 已归还
+    case '2': return 'danger'  // 已逾期
+    case '3': return 'warning' // 续借中
     default: return 'info'
   }
 }
 
 // 获取状态显示文本
 const getStatusText = (status) => {
-  switch (status) {
-    case 'borrowing': return '借阅中'
-    case 'returned': return '已归还'
-    case 'overdue': return '已逾期'
-    default: return status
+  // 确保status是字符串形式，以便比较
+  const statusStr = String(status)
+  switch (statusStr) {
+    case '1': return '借阅中'
+    case '0': return '已归还'
+    case '2': return '已逾期'
+    case '3': return '续借中'
+    default: return '未知状态'
   }
+}
+
+// 格式化日期
+const formatDate = (date) => {
+  if (!date) return ''
+  if (typeof date === 'string') {
+    // 如果已经是格式化的日期字符串，直接返回
+    if (date.includes('-') && date.length >= 10) {
+      return date.substring(0, 10) // 只取年月日部分 YYYY-MM-DD
+    }
+    date = new Date(date)
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 // 计算剩余天数
@@ -279,113 +334,51 @@ const getRemainingDays = (returnDate) => {
   return diffDays
 }
 
-// 模拟获取借阅记录数据
-const fetchBorrowRecords = () => {
-  loading.value = true
-  
-  // 模拟API请求延迟
-  setTimeout(() => {
-    // 这里应该是调用真实的API
-    // 模拟数据
-    allRecords.value = [
-      {
-        borrowId: 'BR20230001',
-        title: '活着',
-        author: '余华',
-        coverImage: '/src/assets/Image/book1.jpg',
-        borrower: '张三',
-        borrowDate: '2023-09-01',
-        returnDate: '2023-10-01',
-        actualReturnDate: null,
-        status: 'returned',
-        renewCount: 0,
-        maxRenewCount: 2
-      },
-      {
-        borrowId: 'BR20230002',
-        title: '三体',
-        author: '刘慈欣',
-        coverImage: '/src/assets/Image/book2.jpg',
-        borrower: '李四',
-        borrowDate: '2023-09-15',
-        returnDate: '2023-11-20',
-        actualReturnDate: null,
-        status: 'borrowing',
-        renewCount: 1,
-        maxRenewCount: 2
-      },
-      {
-        borrowId: 'BR20230003',
-        title: '平凡的世界',
-        author: '路遥',
-        coverImage: '/src/assets/Image/book3.jpg',
-        borrower: '王五',
-        borrowDate: '2023-08-15',
-        returnDate: '2023-09-15',
-        actualReturnDate: null,
-        status: 'overdue',
-        renewCount: 0,
-        maxRenewCount: 2
-      },
-      {
-        borrowId: 'BR20230004',
-        title: '围城',
-        author: '钱钟书',
-        coverImage: '/src/assets/Image/book4.jpg',
-        borrower: '赵六',
-        borrowDate: '2023-10-10',
-        returnDate: '2023-11-10',
-        actualReturnDate: null,
-        status: 'borrowing',
-        renewCount: 0,
-        maxRenewCount: 2
-      },
-      {
-        borrowId: 'BR20230005',
-        title: '人间失格',
-        author: '太宰治',
-        coverImage: '/src/assets/Image/book1.jpg',
-        borrower: '张三',
-        borrowDate: '2023-09-20',
-        returnDate: '2023-10-20',
-        actualReturnDate: '2023-10-18',
-        status: 'returned',
-        renewCount: 0,
-        maxRenewCount: 2
-      },
-      // 添加更多模拟数据
-      {
-        borrowId: 'BR20230006',
-        title: '月亮与六便士',
-        author: '毛姆',
-        coverImage: '/src/assets/Image/book2.jpg',
-        borrower: '李四',
-        borrowDate: '2023-10-05',
-        returnDate: '2023-11-05',
-        actualReturnDate: null,
-        status: 'borrowing',
-        renewCount: 0,
-        maxRenewCount: 2
-      },
-      {
-        borrowId: 'BR20230007',
-        title: '百年孤独',
-        author: '加西亚·马尔克斯',
-        coverImage: '/src/assets/Image/book3.jpg',
-        borrower: '王五',
-        borrowDate: '2023-10-01',
-        returnDate: '2023-11-01',
-        actualReturnDate: null,
-        status: 'borrowing',
-        renewCount: 0,
-        maxRenewCount: 2
+// 删除借阅记录
+const deleteRecord = (row) => {
+  ElMessageBox.confirm(
+    `确定要删除《${row.bookName || row.title || '此书'}》的借阅记录吗？此操作不可恢复。`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      loading.value = true;
+      // 调用删除API
+      const recordId = row.id || row.borrowId;
+      const response = await DeleteBorrowRecordAPI(recordId);
+      console.log('删除借阅记录API响应:', response);
+      
+      if (response && response.code === 200) {
+        ElMessage({
+          type: 'success',
+          message: response.msg || '借阅记录删除成功'
+        });
+        // 删除成功后刷新数据
+        fetchBorrowRecords();
+      } else {
+        ElMessage.error(response?.msg || '删除借阅记录失败');
       }
-    ]
-    
-    // 更新总数
-    pagination.total = allRecords.value.length
-    loading.value = false
-  }, 800) // 模拟加载时间
+    } catch (error) {
+      console.error('删除借阅记录出错:', error);
+      ElMessage.error('删除借阅记录失败，请稍后重试');
+    } finally {
+      loading.value = false;
+    }
+  }).catch(() => {});
+}
+
+// 修改借阅记录
+const editRecord = (row) => {
+  console.log('修改借阅记录:', row)
+  ElMessage({
+    type: 'info',
+    message: `正在修改借阅记录 ${row.borrowId || row.id}`
+  })
+  // 这里应该显示修改对话框
 }
 
 onMounted(() => {
@@ -411,7 +404,7 @@ onMounted(() => {
           <el-icon><DocumentCopy /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ filteredRecords.filter(r => r.status === 'borrowing').length }}</div>
+          <div class="stat-value">{{ filteredRecords.filter(r => String(r.status) === '1' || String(r.status) === '3').length }}</div>
           <div class="stat-label">借阅中</div>
         </div>
       </div>
@@ -421,7 +414,7 @@ onMounted(() => {
           <el-icon><StarFilled /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ filteredRecords.filter(r => r.status === 'returned').length }}</div>
+          <div class="stat-value">{{ filteredRecords.filter(r => String(r.status) === '0').length }}</div>
           <div class="stat-label">已归还</div>
         </div>
       </div>
@@ -431,7 +424,7 @@ onMounted(() => {
           <el-icon><Warning /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ filteredRecords.filter(r => r.status === 'overdue').length }}</div>
+          <div class="stat-value">{{ filteredRecords.filter(r => String(r.status) === '2').length }}</div>
           <div class="stat-label">已逾期</div>
         </div>
       </div>
@@ -450,7 +443,7 @@ onMounted(() => {
         <el-form-item label="关键词">
           <el-input 
             v-model="searchForm.keyword" 
-            placeholder="书名/借阅人/编号" 
+            placeholder="书名/借阅人/借阅号" 
             clearable
             @keyup.enter="handleSearch"
             :prefix-icon="Search"
@@ -527,7 +520,7 @@ onMounted(() => {
         style="width: 100%" 
         border 
         v-loading="loading"
-        row-key="borrowId"
+        row-key="id"
         :header-cell-style="{backgroundColor: '#f9f6f2', color: '#3d2c29', fontWeight: 'bold'}"
         :row-class-name="tableRowClassName"
       >
@@ -538,39 +531,43 @@ onMounted(() => {
               :preview-src-list="[scope.row.coverImage]"
               fit="cover"
               style="width: 60px; height: 80px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-            />
+            >
+              <template #error>
+                <div class="image-error">FAILED</div>
+              </template>
+            </el-image>
           </template>
         </el-table-column>
         
         <el-table-column prop="borrowId" label="借阅编号" width="120" />
         
-        <el-table-column prop="title" label="书名" min-width="150" show-overflow-tooltip>
+        <el-table-column prop="bookName" label="书名" min-width="150" show-overflow-tooltip>
           <template #default="scope">
             <div class="book-title-cell">
-              <span class="book-title-text">{{ scope.row.title }}</span>
+              <span class="book-title-text">{{ scope.row.bookName || scope.row.title }}</span>
             </div>
           </template>
         </el-table-column>
         
         <el-table-column prop="borrower" label="借阅人" width="120" />
         
-        <el-table-column label="借阅日期" width="120">
+        <el-table-column label="借阅日期" width="160">
           <template #default="scope">
-            {{ scope.row.borrowDate }}
+            {{ formatDate(scope.row.borrowDate) }}
           </template>
         </el-table-column>
         
-        <el-table-column label="应还日期" width="120">
+        <el-table-column label="应还日期" width="160">
           <template #default="scope">
             <span 
               :class="{ 
-                'date-highlight': scope.row.status === 'borrowing' && getRemainingDays(scope.row.returnDate) <= 3,
-                'date-overdue': scope.row.status === 'overdue'
+                'date-highlight': (String(scope.row.status) === '1' || String(scope.row.status) === '3') && getRemainingDays(scope.row.returnDate) <= 3,
+                'date-overdue': String(scope.row.status) === '2'
               }"
             >
-              {{ scope.row.returnDate }}
+              {{ formatDate(scope.row.returnDate) }}
               <el-tooltip 
-                v-if="scope.row.status === 'borrowing' && getRemainingDays(scope.row.returnDate) <= 3" 
+                v-if="(String(scope.row.status) === '1' || String(scope.row.status) === '3') && getRemainingDays(scope.row.returnDate) <= 3" 
                 content="即将到期" 
                 placement="top" 
                 effect="light"
@@ -581,9 +578,9 @@ onMounted(() => {
           </template>
         </el-table-column>
         
-        <el-table-column label="实际归还" width="120">
+        <el-table-column label="实际归还" width="160">
           <template #default="scope">
-            {{ scope.row.actualReturnDate || '-' }}
+            {{ scope.row.actualReturnDate ? formatDate(scope.row.actualReturnDate) : (String(scope.row.status) === '0' ? formatDate(scope.row.returnDate) : '未归还') }}
           </template>
         </el-table-column>
         
@@ -600,15 +597,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         
-        <el-table-column label="续借次数" width="110" align="center">
-          <template #default="scope">
-            <span class="renew-count">
-              {{ scope.row.renewCount }} / {{ scope.row.maxRenewCount }}
-            </span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" min-width="180" fixed="right">
           <template #default="scope">
             <div class="table-actions">
               <el-tooltip content="查看详情" placement="top" effect="light">
@@ -623,20 +612,31 @@ onMounted(() => {
                 </el-button>
               </el-tooltip>
               
-              <el-tooltip content="续借" placement="top" effect="light" v-if="scope.row.status === 'borrowing'">
+              <el-tooltip content="修改" placement="top" effect="light">
+                <el-button 
+                  type="info" 
+                  size="small" 
+                  circle
+                  @click="editRecord(scope.row)"
+                  class="action-button edit-button"
+                >
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </el-tooltip>
+              
+              <el-tooltip content="续借" placement="top" effect="light" v-if="String(scope.row.status) === '1'">
                 <el-button 
                   type="warning" 
                   size="small" 
                   circle
                   @click="renewBook(scope.row)"
                   class="action-button renew-button"
-                  :disabled="scope.row.renewCount >= scope.row.maxRenewCount"
                 >
                   <el-icon><Calendar /></el-icon>
                 </el-button>
               </el-tooltip>
               
-              <el-tooltip content="归还" placement="top" effect="light" v-if="scope.row.status === 'borrowing' || scope.row.status === 'overdue'">
+              <el-tooltip content="归还" placement="top" effect="light" v-if="String(scope.row.status) === '1' || String(scope.row.status) === '2' || String(scope.row.status) === '3'">
                 <el-button 
                   type="success" 
                   size="small" 
@@ -645,6 +645,18 @@ onMounted(() => {
                   class="action-button return-button"
                 >
                   <el-icon><DocumentCopy /></el-icon>
+                </el-button>
+              </el-tooltip>
+              
+              <el-tooltip content="删除" placement="top" effect="light">
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  circle
+                  @click="deleteRecord(scope.row)"
+                  class="action-button delete-button"
+                >
+                  <el-icon><Delete /></el-icon>
                 </el-button>
               </el-tooltip>
             </div>
@@ -969,17 +981,20 @@ onMounted(() => {
             background-color: #4c8dae;
           }
           
+          &.edit-button {
+            background-color: #909399;
+          }
+          
           &.renew-button {
             background-color: #e6a23c;
-            
-            &:disabled {
-              background-color: #f0f0f0;
-              cursor: not-allowed;
-            }
           }
           
           &.return-button {
             background-color: #67c23a;
+          }
+          
+          &.delete-button {
+            background-color: #f56c6c;
           }
         }
       }
@@ -1021,6 +1036,18 @@ onMounted(() => {
         background-color: #6e4c34;
       }
     }
+  }
+  
+  .image-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 80px;
+    background-color: #f5f7fa;
+    color: #909399;
+    font-size: 10px;
+    border-radius: 6px;
   }
 }
 

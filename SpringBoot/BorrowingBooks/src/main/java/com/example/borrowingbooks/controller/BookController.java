@@ -56,4 +56,10 @@ public class BookController {
         log.info("更新图书 {}", bookDTO);
         return bookService.updateBook(bookDTO);
     }
+
+    @PostMapping("/save")
+    public Result<String> saveBook(@RequestBody BookDTO bookDTO) {
+        log.info("保存图书 {}", bookDTO);
+        return bookService.saveBook(bookDTO);
+    }
 }
