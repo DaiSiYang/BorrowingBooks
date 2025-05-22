@@ -84,6 +84,7 @@ import {
   ArrowLeft,
   ArrowRight
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const userInfoStore = useUserInfoStore()
 const router = useRouter()
@@ -125,7 +126,8 @@ const navigateTo = (path) => {
         // 导航到错误页面
         router.push('/error')
       })
-  } else {
+  } 
+  else {
     // 其他路由正常导航
     router.push(path).catch(err => {
       console.error('路由导航失败:', err)

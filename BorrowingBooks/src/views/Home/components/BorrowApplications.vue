@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Search, RefreshLeft, CheckCircle, CircleCloseFilled, CircleClose, View, Check, MoreFilled } from '@element-plus/icons-vue'
+import { Search, RefreshLeft, CircleCheck, CircleCloseFilled, CircleClose, View, Check, MoreFilled, Tickets } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import service from '@/utils/http.js'
 
@@ -90,24 +90,20 @@ const resetSearch = () => {
 // 处理分页变化
 const handleCurrentChange = (val) => {
   pagination.currentPage = val
-  fetchApplications()
 }
 
 // 处理每页显示数量变化
 const handleSizeChange = (val) => {
   pagination.pageSize = val
   pagination.currentPage = 1
-  fetchApplications()
 }
 
 // 查看申请详情
 const viewApplication = (row) => {
-  console.log('查看申请详情:', row)
   ElMessage({
     type: 'info',
     message: `正在查看申请 ${row.applicationId}`
   })
-  // 这里应该显示详情对话框
 }
 
 // 批准申请
@@ -202,23 +198,15 @@ const getStatusText = (status) => {
 }
 
 // 获取借阅申请列表
-const fetchApplications = async () => {
+const fetchApplications = () => {
   tableLoading.value = true
   
   try {
-    // 这里应该替换为实际的API调用
-    // const response = await service.post('/borrowApplications/list', {
-    //   ...searchForm,
-    //   page: pagination.currentPage,
-    //   pageSize: pagination.pageSize
-    // })
-    
-    // 模拟API响应
+    // 模拟数据加载
     setTimeout(() => {
-      // 模拟数据
-      const mockData = generateMockData()
-      allApplications.value = mockData.records
-      pagination.total = mockData.total
+      // 生成模拟数据
+      allApplications.value = generateMockData().records
+      pagination.total = allApplications.value.length
       
       tableLoading.value = false
     }, 500)
@@ -233,130 +221,52 @@ const generateMockData = () => {
   const records = []
   const statuses = ['pending', 'approved', 'rejected']
   const types = ['new', 'renewal', 'reservation']
+  const books = [
+    '活着', '追风筝的人', '百年孤独', '三体', '球状闪电',
+    '目送', '围城', '小王子', '解忧杂货店', '人类简史',
+    'JavaScript高级程序设计', 'Vue.js实战', 'CSS权威指南', '算法导论', '数据结构'
+  ]
+  const users = [
+    '张三', '李四', '王五', '赵六', '钱七',
+    '孙八', '周九', '吴十', '郑十一', '王十二'
+  ]
   
   for (let i = 1; i <= 23; i++) {
-    // 应该根据搜索条件筛选数据
     const status = statuses[Math.floor(Math.random() * statuses.length)]
+    const type = types[Math.floor(Math.random() * types.length)]
+    const book = books[Math.floor(Math.random() * books.length)]
+    const user = users[Math.floor(Math.random() * users.length)]
     
-    // 如果有状态筛选且不匹配，则跳过
-    if (searchForm.status && searchForm.status !== status) continue
-    
-    // 如果有关键词筛选
-    if (searchForm.keyword && !`用户${i}`.includes(searchForm.keyword) && 
-        !`图书标题${i}`.includes(searchForm.keyword)) continue
+    // 生成随机日期，最近30天内
+    const today = new Date()
+    const randomDays = Math.floor(Math.random() * 30)
+    const applyDate = new Date(today)
+    applyDate.setDate(today.getDate() - randomDays)
     
     records.push({
-      id: `BRQ-2023-${1000 + i}`,
+      id: i,
+      applicationId: `BRQ-2023-${1000 + i}`,
       userId: `USER${1000 + i}`,
-      userName: `用户${i}`,
       bookId: `BOOK${2000 + i}`,
-      bookTitle: `图书标题${i}`,
-      applicationTime: new Date(2023, 5, i).toLocaleString(),
-      expectedReturnTime: new Date(2023, 6, i + 30).toLocaleString(),
-      status: status,
-      type: types[i % 3],
-      reason: `申请理由：这本书对我的学习/研究非常有帮助，希望能借阅/续借${i}天。`,
-      remark: status !== 'pending' ? `处理备注：${status === 'approved' ? '符合借阅条件，批准申请' : '库存不足，暂时无法借出'}` : ''
+      type,
+      title: book,
+      applicant: user,
+      applyDate: formatDate(applyDate),
+      status,
+      processDate: status !== 'pending' ? formatDate(new Date(applyDate.getTime() + 86400000)) : null,
+      processBy: status !== 'pending' ? '管理员' : null,
+      rejectReason: status === 'rejected' ? '暂时无法借阅' : null,
+      notes: `借阅申请${i}的备注信息`
     })
   }
   
-  // 分页处理
-  const start = (pagination.currentPage - 1) * pagination.pageSize
-  const end = start + pagination.pageSize
-  
   return {
-    records: records.slice(start, end),
+    records,
     total: records.length
   }
 }
 
-// 处理借阅申请
-const handleApplication = async (row, action) => {
-  const actionText = action === 'approve' ? '批准' : '拒绝'
-  const confirmMessage = action === 'approve' 
-    ? `确定批准用户 ${row.userName} 的借阅申请吗？`
-    : `确定拒绝用户 ${row.userName} 的借阅申请吗？请确保已告知用户拒绝原因。`
-  
-  ElMessageBox.confirm(confirmMessage, '操作确认', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: action === 'approve' ? 'success' : 'warning'
-  }).then(async () => {
-    loading.value = true
-    
-    try {
-      // 这里应该替换为实际的API调用
-      // await service.post(`/borrowApplications/${action}`, { id: row.id })
-      
-      // 模拟API调用
-      setTimeout(() => {
-        // 更新本地状态
-        const index = allApplications.value.findIndex(item => item.id === row.id)
-        if (index !== -1) {
-          allApplications.value[index].status = action === 'approve' ? 'approved' : 'rejected'
-          allApplications.value[index].remark = action === 'approve' 
-            ? '处理备注：符合借阅条件，批准申请' 
-            : '处理备注：库存不足，暂时无法借出'
-        }
-        
-        ElMessage({
-          type: 'success',
-          message: `已${actionText}借阅申请`
-        })
-        
-        loading.value = false
-      }, 500)
-    } catch (error) {
-      console.error(`${actionText}借阅申请失败:`, error)
-      ElMessage.error(`${actionText}失败，请重试`)
-      loading.value = false
-    }
-  }).catch(() => {
-    // 用户取消操作
-  })
-}
-
-// 查看申请详情
-const viewApplicationDetail = (row) => {
-  ElMessageBox.alert(
-    `
-    <div class="application-detail">
-      <p><strong>申请编号：</strong>${row.id}</p>
-      <p><strong>用户信息：</strong>${row.userName} (${row.userId})</p>
-      <p><strong>图书信息：</strong>${row.bookTitle} (${row.bookId})</p>
-      <p><strong>申请类型：</strong>${getApplicationTypeLabel(row.type)}</p>
-      <p><strong>申请时间：</strong>${row.applicationTime}</p>
-      <p><strong>预计归还时间：</strong>${row.expectedReturnTime}</p>
-      <p><strong>申请状态：</strong>${getStatusLabel(row.status)}</p>
-      <p><strong>申请理由：</strong>${row.reason}</p>
-      ${row.remark ? `<p><strong>处理备注：</strong>${row.remark}</p>` : ''}
-    </div>
-    `,
-    '申请详情',
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '关闭'
-    }
-  )
-}
-
-// 获取状态标签
-const getStatusLabel = (status) => {
-  return statusOptions.find(option => option.value === status)?.label || status
-}
-
-// 获取申请类型标签
-const getApplicationTypeLabel = (type) => {
-  return applicationTypes.find(option => option.value === type)?.label || type
-}
-
-// 申请类型选项
-const applicationTypes = [
-  { value: 'new', label: '新借阅' },
-  { value: 'renewal', label: '续借' },
-  { value: 'reservation', label: '预约' }
-]
-
+// 组件挂载时加载数据
 onMounted(() => {
   fetchApplications()
 })
@@ -364,617 +274,213 @@ onMounted(() => {
 
 <template>
   <div class="borrow-applications-container">
-    <div class="page-header">
-      <h2 class="page-title">借阅申请</h2>
-    </div>
-    
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <div class="stat-card pending-card">
-        <div class="stat-icon">
-          <el-icon><View /></el-icon>
+    <el-card class="applications-header" shadow="hover">
+      <div class="header-content">
+        <div class="header-title">
+          <h2><el-icon><Tickets /></el-icon> 借阅申请管理</h2>
+          <p>管理和处理用户的借阅申请</p>
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ filteredApplications.filter(a => a.status === 'pending').length }}</div>
-          <div class="stat-label">待处理</div>
-        </div>
-      </div>
-      
-      <div class="stat-card approved-card">
-        <div class="stat-icon">
-          <el-icon><CheckCircle /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ filteredApplications.filter(a => a.status === 'approved').length }}</div>
-          <div class="stat-label">已批准</div>
-        </div>
-      </div>
-      
-      <div class="stat-card rejected-card">
-        <div class="stat-icon">
-          <el-icon><CircleClose /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ filteredApplications.filter(a => a.status === 'rejected').length }}</div>
-          <div class="stat-label">已拒绝</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 搜索区域 -->
-    <el-card class="search-card">
-      <div class="card-header">
-        <div class="header-icon">
-          <el-icon><Search /></el-icon>
-        </div>
-        <div class="header-title">搜索筛选</div>
-      </div>
-      
-      <el-form :model="searchForm" inline class="search-form">
-        <el-form-item label="关键词">
-          <el-input 
-            v-model="searchForm.keyword" 
-            placeholder="书名/申请人/编号" 
-            clearable
-            @keyup.enter="fetchApplications"
-            :prefix-icon="Search"
-            class="custom-input"
-          />
-        </el-form-item>
-        
-        <el-form-item label="申请状态">
-          <el-select 
-            v-model="searchForm.status" 
-            placeholder="选择状态" 
-            clearable 
-            class="custom-select"
-          >
-            <el-option 
-              v-for="item in statusOptions" 
-              :key="item.value" 
-              :label="item.label" 
-              :value="item.value" 
-            />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="申请时间">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            class="custom-date-picker"
-          />
-        </el-form-item>
-        
-        <el-form-item>
-          <el-button type="primary" @click="fetchApplications" class="search-button">
-            <el-icon><Search /></el-icon>搜索
-          </el-button>
-          <el-button @click="resetSearch" class="reset-button">
-            <el-icon><RefreshLeft /></el-icon>重置
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-    
-    <!-- 结果信息 -->
-    <div class="result-info">
-      共找到 <span class="highlight">{{ pagination.total }}</span> 条申请记录
-    </div>
-    
-    <!-- 申请记录表格 -->
-    <el-card class="table-card">
-      <el-table 
-        :data="tableData" 
-        style="width: 100%" 
-        border 
-        v-loading="tableLoading"
-        row-key="applicationId"
-        :header-cell-style="{backgroundColor: '#f9f6f2', color: '#3d2c29', fontWeight: 'bold'}"
-        :row-class-name="tableRowClassName"
-      >
-        <el-table-column label="封面" width="80" align="center">
-          <template #default="scope">
-            <el-image 
-              :src="scope.row.coverImage" 
-              :preview-src-list="[scope.row.coverImage]"
-              fit="cover"
-              style="width: 60px; height: 80px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-            />
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="applicationId" label="申请编号" width="120" />
-        
-        <el-table-column prop="title" label="书名" min-width="150" show-overflow-tooltip>
-          <template #default="scope">
-            <div class="book-title-cell">
-              <span class="book-title-text">{{ scope.row.title }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="applicant" label="申请人" width="100" />
-        
-        <el-table-column label="申请日期" width="120">
-          <template #default="scope">
-            {{ scope.row.applyDate }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="借阅天数" width="100" align="center">
-          <template #default="scope">
-            <span class="borrow-days">{{ scope.row.expectedBorrowDays }}天</span>
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="申请原因" min-width="150" show-overflow-tooltip>
-          <template #default="scope">
-            {{ scope.row.reason }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="scope">
-            <el-tag 
-              :type="getStatusType(scope.row.status)"
-              size="small"
-              effect="dark"
-              class="status-tag"
-            >
-              {{ getStatusText(scope.row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="scope">
-            <div class="table-actions">
-              <el-tooltip content="查看详情" placement="top" effect="light">
-                <el-button 
-                  type="primary" 
-                  size="small" 
-                  circle
-                  @click="viewApplicationDetail(scope.row)"
-                  class="action-button view-button"
-                >
-                  <el-icon><View /></el-icon>
-                </el-button>
-              </el-tooltip>
-              
-              <template v-if="scope.row.status === 'pending'">
-                <el-tooltip content="批准" placement="top" effect="light">
-                  <el-button 
-                    type="success" 
-                    size="small" 
-                    circle
-                    @click="handleApplication(scope.row, 'approve')"
-                    class="action-button approve-button"
-                  >
-                    <el-icon><Check /></el-icon>
-                  </el-button>
-                </el-tooltip>
-                
-                <el-tooltip content="拒绝" placement="top" effect="light">
-                  <el-button 
-                    type="danger" 
-                    size="small" 
-                    circle
-                    @click="handleApplication(scope.row, 'reject')"
-                    class="action-button reject-button"
-                  >
-                    <el-icon><CircleClose /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </template>
-              
-              <template v-else>
-                <span class="processed-info">
-                  {{ scope.row.processDate }} 由 {{ scope.row.processBy }} 处理
-                </span>
-              </template>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-      
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.currentPage"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[5, 10, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="pagination.total"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          background
-        />
       </div>
     </el-card>
     
-    <!-- 无数据提示 -->
-    <el-empty 
-      v-if="filteredApplications.length === 0 && !tableLoading" 
-      description="暂无借阅申请" 
-      class="empty-data"
-    />
+    <el-card class="applications-content" shadow="hover">
+      <div class="search-area">
+        <el-form :model="searchForm" class="search-form" inline>
+          <el-form-item>
+            <el-input
+              v-model="searchForm.keyword"
+              placeholder="搜索申请编号/申请人/图书"
+              prefix-icon="Search"
+              clearable
+            />
+          </el-form-item>
+          
+          <el-form-item>
+            <el-select v-model="searchForm.status" placeholder="申请状态" clearable>
+              <el-option
+                v-for="item in statusOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item>
+            <el-date-picker
+              v-model="searchForm.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              format="YYYY/MM/DD"
+              value-format="YYYY-MM-DD"
+            />
+          </el-form-item>
+          
+          <el-form-item>
+            <el-button type="primary" @click="fetchApplications" :loading="loading">
+              <el-icon><Search /></el-icon>搜索
+            </el-button>
+            <el-button @click="resetSearch">
+              <el-icon><RefreshLeft /></el-icon>重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <div class="table-area">
+        <el-table
+          :data="tableData"
+          style="width: 100%"
+          border
+          v-loading="tableLoading"
+          :row-class-name="tableRowClassName"
+        >
+          <el-table-column type="index" width="50" />
+          
+          <el-table-column prop="applicationId" label="申请编号" width="120" />
+          
+          <el-table-column prop="title" label="图书名称" min-width="150" show-overflow-tooltip />
+          
+          <el-table-column prop="applicant" label="申请人" width="100" />
+          
+          <el-table-column prop="type" label="申请类型" width="100">
+            <template #default="scope">
+              <el-tag
+                :type="scope.row.type === 'renewal' ? 'success' : scope.row.type === 'reservation' ? 'info' : 'primary'"
+                size="small"
+              >
+                {{ scope.row.type === 'renewal' ? '续借' : scope.row.type === 'reservation' ? '预约' : '新借' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="applyDate" label="申请日期" width="110" />
+          
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="scope">
+              <el-tag
+                :type="getStatusType(scope.row.status)"
+                size="small"
+              >
+                {{ getStatusText(scope.row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="processDate" label="处理日期" width="110" />
+          
+          <el-table-column prop="processBy" label="处理人" width="100" />
+          
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="scope">
+              <el-button
+                v-if="scope.row.status === 'pending'"
+                type="success"
+                size="small"
+                @click="approveApplication(scope.row)"
+                text
+              >
+                <el-icon><Check /></el-icon>批准
+              </el-button>
+              
+              <el-button
+                v-if="scope.row.status === 'pending'"
+                type="danger"
+                size="small"
+                @click="rejectApplication(scope.row)"
+                text
+              >
+                <el-icon><CircleClose /></el-icon>拒绝
+              </el-button>
+              
+              <el-button
+                type="primary"
+                size="small"
+                @click="viewApplication(scope.row)"
+                text
+              >
+                <el-icon><View /></el-icon>详情
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        
+        <div class="pagination-area">
+          <el-pagination
+            v-model:current-page="pagination.currentPage"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="pagination.total"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            background
+          />
+        </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <style scoped lang="scss">
 .borrow-applications-container {
   padding: 24px;
-  height: 100%;
-  overflow-y: auto;
-  background-color: #fff;
   
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    
-    .page-title {
-      font-size: 24px;
-      color: #3d2c29;
-      margin: 0;
-      position: relative;
-      padding-left: 16px;
-      font-weight: 600;
-      
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 4px;
-        height: 24px;
-        background: linear-gradient(to bottom, #8a5f41, #e36049);
-        border-radius: 2px;
-      }
-    }
-  }
-  
-  .stats-cards {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    
-    .stat-card {
-      flex: 1;
-      min-width: 200px;
-      border-radius: 10px;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
-      }
-      
-      &.pending-card {
-        background-color: #fdf6ec;
-        
-        .stat-icon {
-          background-color: rgba(230, 162, 60, 0.1);
-          color: #e6a23c;
-        }
-        
-        .stat-info {
-          .stat-value {
-            color: #e6a23c;
-          }
-          
-          .stat-label {
-            color: #e6a23c;
-          }
-        }
-      }
-      
-      &.approved-card {
-        background-color: #f0f9eb;
-        
-        .stat-icon {
-          background-color: rgba(103, 194, 58, 0.1);
-          color: #67c23a;
-        }
-        
-        .stat-info {
-          .stat-value {
-            color: #67c23a;
-          }
-          
-          .stat-label {
-            color: #67c23a;
-          }
-        }
-      }
-      
-      &.rejected-card {
-        background-color: #fef0f0;
-        
-        .stat-icon {
-          background-color: rgba(245, 108, 108, 0.1);
-          color: #f56c6c;
-        }
-        
-        .stat-info {
-          .stat-value {
-            color: #f56c6c;
-          }
-          
-          .stat-label {
-            color: #f56c6c;
-          }
-        }
-      }
-      
-      .stat-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 20px;
-        font-size: 24px;
-      }
-      
-      .stat-info {
-        .stat-value {
-          font-size: 28px;
-          font-weight: bold;
-          margin-bottom: 5px;
-        }
-        
-        .stat-label {
-          font-size: 14px;
-        }
-      }
-    }
-  }
-  
-  .search-card {
-    margin-bottom: 24px;
-    border-radius: 10px;
+  .applications-header {
+    margin-bottom: 20px;
+    border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-    border: none;
-    overflow: hidden;
     
-    .card-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 20px;
-      
-      .header-icon {
-        width: 36px;
-        height: 36px;
-        background-color: rgba(138, 95, 65, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        
-        .el-icon {
-          font-size: 20px;
-          color: #8a5f41;
-        }
-      }
-      
+    .header-content {
       .header-title {
-        font-size: 16px;
-        color: #3d2c29;
-        font-weight: 600;
-      }
-    }
-    
-    .search-form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      
-      .el-form-item {
-        margin-bottom: 10px;
-        margin-right: 0;
-        
-        .el-form-item__label {
+        h2 {
+          font-size: 22px;
           color: #3d2c29;
-          font-weight: 500;
-        }
-      }
-      
-      .custom-input, .custom-select, .custom-date-picker {
-        .el-input__wrapper, :deep(.el-range-editor.el-input__wrapper) {
-          border-radius: 8px;
-          box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+          margin: 0 0 5px 0;
+          display: flex;
+          align-items: center;
           
-          &:hover, &.is-focus {
-            box-shadow: 0 0 0 1px #8a5f41 inset;
+          .el-icon {
+            margin-right: 8px;
+            color: #8a5f41;
           }
         }
         
-        .el-input__prefix-inner {
+        p {
+          font-size: 14px;
           color: #8a5f41;
-        }
-      }
-      
-      .search-button {
-        background-color: #8a5f41;
-        border-color: #8a5f41;
-        border-radius: 8px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-        
-        &:hover {
-          background-color: #6e4c34;
-          transform: translateY(-2px);
-        }
-      }
-      
-      .reset-button {
-        border-color: #8a5f41;
-        color: #8a5f41;
-        border-radius: 8px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-        
-        &:hover {
-          background-color: rgba(138, 95, 65, 0.05);
-          transform: translateY(-2px);
+          margin: 0;
         }
       }
     }
   }
   
-  .result-info {
-    margin-bottom: 16px;
-    font-size: 14px;
-    color: #666;
-    
-    .highlight {
-      color: #e36049;
-      font-weight: 600;
-      font-size: 16px;
-    }
-  }
-  
-  .table-card {
-    border-radius: 10px;
+  .applications-content {
+    border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-    border: none;
-    overflow: hidden;
-    margin-bottom: 30px;
     
-    .el-table {
-      border-radius: 8px;
-      overflow: hidden;
-      
-      .book-title-cell {
-        .book-title-text {
-          font-weight: 500;
-          color: #3d2c29;
-        }
-      }
-      
-      .borrow-days {
-        font-weight: 500;
-        color: #8a5f41;
-      }
-      
-      .status-tag {
-        border-radius: 12px;
-        font-weight: 500;
-        padding: 0 10px;
-      }
-      
-      .table-actions {
+    .search-area {
+      margin-bottom: 20px;
+    }
+    
+    .table-area {
+      .pagination-area {
+        margin-top: 20px;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-        
-        .processed-info {
-          font-size: 13px;
-          color: #8a5f41;
-        }
-        
-        .action-button {
-          transition: all 0.3s;
-          border: none;
-          
-          &:hover {
-            transform: translateY(-2px);
-          }
-          
-          &.view-button {
-            background-color: #4c8dae;
-          }
-          
-          &.approve-button {
-            background-color: #67c23a;
-          }
-          
-          &.reject-button {
-            background-color: #f56c6c;
-          }
-        }
-      }
-    }
-    
-    .approved-row {
-      background-color: rgba(103, 194, 58, 0.05);
-    }
-    
-    .rejected-row {
-      background-color: rgba(245, 108, 108, 0.05);
-    }
-  }
-  
-  .pagination-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    padding: 10px 0;
-    
-    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
-      background-color: #8a5f41;
-    }
-    
-    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled):hover) {
-      color: #8a5f41;
-    }
-  }
-  
-  .empty-data {
-    margin: 40px 0;
-    
-    .el-button {
-      background-color: #8a5f41;
-      border-color: #8a5f41;
-      margin-top: 16px;
-      
-      &:hover {
-        background-color: #6e4c34;
+        justify-content: flex-end;
       }
     }
   }
 }
 
-// 响应式调整
-@media (max-width: 768px) {
-  .borrow-applications-container {
-    padding: 16px;
-    
-    .page-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    
-    .stats-cards {
-      flex-direction: column;
-      
-      .stat-card {
-        width: 100%;
-      }
-    }
-    
-    .search-form {
-      .el-form-item {
-        width: 100%;
-      }
-    }
-  }
+// 表格行样式
+:deep(.approved-row) {
+  background-color: rgba(103, 194, 58, 0.1);
+}
+
+:deep(.rejected-row) {
+  background-color: rgba(245, 108, 108, 0.1);
 }
 </style> 

@@ -1,7 +1,11 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, LocationInformation, Timer, Bell, List, User, Lock, Message, Operation, Document, Download, Delete, Plus } from '@element-plus/icons-vue'
+import { 
+  Setting, LocationInformation, Timer, Bell, List, User, Lock, 
+  Message, Operation, Document, Download, Delete, Plus, Check, 
+  RefreshLeft, Calendar, Refresh, Files, Warning, Phone, Link, Location, Menu
+} from '@element-plus/icons-vue'
 
 // 页面加载状态
 const loading = ref(false)
@@ -280,21 +284,46 @@ const resetSystem = () => {
       // 取消操作
     })
 }
+
+// 保存所有设置
+const saveAllSettings = async () => {
+  loading.value = true
+  
+  try {
+    // 模拟异步保存
+    setTimeout(() => {
+      loading.value = false
+      ElMessage({
+        type: 'success',
+        message: '所有设置已保存成功',
+        duration: 2000,
+      })
+    }, 1500)
+  } catch (error) {
+    loading.value = false
+    console.error('保存失败:', error)
+  }
+}
 </script>
 
 <template>
   <div class="settings-page">
-    <el-card class="page-header">
+    <el-card class="page-header" shadow="hover">
       <div class="header-content">
         <div class="header-title">
-          <h2>系统设置</h2>
+          <h2><el-icon><Setting /></el-icon> 系统设置</h2>
           <p>配置系统参数和运行环境</p>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" @click="saveAllSettings" :loading="loading">
+            <el-icon><Check /></el-icon>保存全部设置
+          </el-button>
         </div>
       </div>
     </el-card>
 
-    <el-card class="settings-container">
-      <el-tabs v-model="activeTab" tab-position="left" class="settings-tabs" :before-leave="() => !loading">
+    <el-card class="settings-container" shadow="hover">
+      <el-tabs v-model="activeTab" type="border-card" class="settings-tabs" :before-leave="() => !loading">
         <!-- 基本设置 -->
         <el-tab-pane name="basic">
           <template #label>
@@ -304,57 +333,135 @@ const resetSystem = () => {
             </div>
           </template>
           
-          <h3 class="section-title">基本设置</h3>
-          <el-form ref="basicFormRef" :model="basicForm" :rules="basicFormRules" label-width="120px" size="default">
-            <el-form-item label="系统名称:" prop="systemName">
-              <el-input v-model="basicForm.systemName" placeholder="请输入系统名称" />
-            </el-form-item>
+          <div class="tab-content">
+            <div class="section-header">
+              <h3 class="section-title">基本系统信息</h3>
+              <p class="section-desc">设置系统的基本信息，这些信息将显示在前台和管理界面</p>
+            </div>
             
-            <el-form-item label="系统副标题:" prop="systemSubtitle">
-              <el-input v-model="basicForm.systemSubtitle" placeholder="请输入系统副标题" />
-            </el-form-item>
+            <el-divider content-position="left">基础信息</el-divider>
             
-            <el-form-item label="管理员邮箱:" prop="adminEmail">
-              <el-input v-model="basicForm.adminEmail" placeholder="请输入管理员邮箱" />
-            </el-form-item>
-            
-            <el-form-item label="联系电话:" prop="contactPhone">
-              <el-input v-model="basicForm.contactPhone" placeholder="请输入联系电话" />
-            </el-form-item>
-            
-            <el-form-item label="图书馆地址:" prop="address">
-              <el-input v-model="basicForm.address" placeholder="请输入图书馆地址" />
-            </el-form-item>
-            
-            <el-form-item label="网站地址:" prop="websiteUrl">
-              <el-input v-model="basicForm.websiteUrl" placeholder="请输入网站地址" />
-            </el-form-item>
-            
-            <el-form-item label="系统Logo:" prop="logoUrl">
-              <el-upload
-                class="logo-uploader"
-                action="#"
-                :http-request="() => {}"
-                :show-file-list="false"
-                :before-upload="() => false"
-              >
-                <img v-if="basicForm.logoUrl" :src="basicForm.logoUrl" class="logo-preview" />
-                <div v-else class="logo-placeholder">
-                  <el-icon><Plus /></el-icon>
-                </div>
-                <div class="upload-tip">点击上传Logo</div>
-              </el-upload>
-            </el-form-item>
-            
-            <el-form-item label="版权信息:" prop="copyrightText">
-              <el-input v-model="basicForm.copyrightText" placeholder="请输入版权信息" />
-            </el-form-item>
-            
-            <el-form-item>
-              <el-button type="primary" @click="submitForm('basic')" :loading="loading">保存设置</el-button>
-              <el-button @click="basicFormRef.resetFields()">重置</el-button>
-            </el-form-item>
-          </el-form>
+            <el-form ref="basicFormRef" :model="basicForm" :rules="basicFormRules" label-position="top" size="default" class="settings-form">
+              <el-row :gutter="30">
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="系统名称" prop="systemName">
+                    <el-input 
+                      v-model="basicForm.systemName" 
+                      placeholder="请输入系统名称" 
+                      prefix-icon="Menu"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+                  
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="系统副标题" prop="systemSubtitle">
+                    <el-input 
+                      v-model="basicForm.systemSubtitle" 
+                      placeholder="请输入系统副标题"
+                      prefix-icon="Document"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-divider content-position="left">联系方式</el-divider>
+              
+              <el-row :gutter="30">
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="管理员邮箱" prop="adminEmail">
+                    <el-input 
+                      v-model="basicForm.adminEmail" 
+                      placeholder="请输入管理员邮箱" 
+                      prefix-icon="Message"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+                  
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="联系电话" prop="contactPhone">
+                    <el-input 
+                      v-model="basicForm.contactPhone" 
+                      placeholder="请输入联系电话" 
+                      prefix-icon="Phone"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-row :gutter="30">
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="图书馆地址" prop="address">
+                    <el-input 
+                      v-model="basicForm.address" 
+                      placeholder="请输入图书馆地址" 
+                      prefix-icon="Location"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+                  
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="网站地址" prop="websiteUrl">
+                    <el-input 
+                      v-model="basicForm.websiteUrl" 
+                      placeholder="请输入网站地址" 
+                      prefix-icon="Link"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-divider content-position="left">品牌设置</el-divider>
+              
+              <el-row :gutter="30">
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="系统Logo">
+                    <div class="logo-upload-container">
+                      <el-upload
+                        class="logo-uploader"
+                        action="#"
+                        :http-request="() => {}"
+                        :show-file-list="false"
+                        :before-upload="() => false"
+                        drag
+                      >
+                        <img v-if="basicForm.logoUrl" :src="basicForm.logoUrl" class="logo-preview" />
+                        <div v-else class="logo-placeholder">
+                          <el-icon class="upload-icon"><Plus /></el-icon>
+                          <div class="upload-text">点击或拖拽上传Logo</div>
+                        </div>
+                      </el-upload>
+                    </div>
+                  </el-form-item>
+                </el-col>
+                  
+                <el-col :xs="24" :sm="12">
+                  <el-form-item label="版权信息" prop="copyrightText">
+                    <el-input 
+                      v-model="basicForm.copyrightText" 
+                      placeholder="请输入版权信息" 
+                      clearable
+                    />
+                    <div class="form-tip">显示在页面底部的版权声明文字</div>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <div class="form-actions">
+                <el-button plain @click="basicFormRef.resetFields()">
+                  <el-icon><RefreshLeft /></el-icon>重置
+                </el-button>
+                <el-button type="primary" @click="submitForm('basic')" :loading="loading">
+                  <el-icon><Check /></el-icon>保存设置
+                </el-button>
+              </div>
+            </el-form>
+          </div>
         </el-tab-pane>
         
         <!-- 借阅规则 -->
@@ -366,67 +473,218 @@ const resetSystem = () => {
             </div>
           </template>
           
-          <h3 class="section-title">借阅规则设置</h3>
-          <el-form ref="borrowRuleFormRef" :model="borrowRuleForm" :rules="borrowRuleFormRules" label-width="180px" size="default">
-            <h4 class="form-subtitle">借阅期限</h4>
+          <div class="tab-content">
+            <div class="section-header">
+              <h3 class="section-title">借阅规则设置</h3>
+              <p class="section-desc">配置图书借阅相关的规则、限制和费用标准</p>
+            </div>
             
-            <el-form-item label="普通图书借阅天数:" prop="normalBookPeriod">
-              <el-input-number v-model="borrowRuleForm.normalBookPeriod" :min="1" :max="100" />
-            </el-form-item>
-            
-            <el-form-item label="特殊图书借阅天数:" prop="specialBookPeriod">
-              <el-input-number v-model="borrowRuleForm.specialBookPeriod" :min="1" :max="60" />
-            </el-form-item>
-            
-            <h4 class="form-subtitle">续借规则</h4>
-            
-            <el-form-item label="普通图书最大续借次数:" prop="normalBookMaxRenewals">
-              <el-input-number v-model="borrowRuleForm.normalBookMaxRenewals" :min="0" :max="10" />
-            </el-form-item>
-            
-            <el-form-item label="特殊图书最大续借次数:" prop="specialBookMaxRenewals">
-              <el-input-number v-model="borrowRuleForm.specialBookMaxRenewals" :min="0" :max="5" />
-            </el-form-item>
-            
-            <el-form-item label="普通图书续借天数:" prop="normalBookRenewalDays">
-              <el-input-number v-model="borrowRuleForm.normalBookRenewalDays" :min="1" :max="60" />
-            </el-form-item>
-            
-            <el-form-item label="特殊图书续借天数:" prop="specialBookRenewalDays">
-              <el-input-number v-model="borrowRuleForm.specialBookRenewalDays" :min="1" :max="30" />
-            </el-form-item>
-            
-            <h4 class="form-subtitle">借阅限制</h4>
-            
-            <el-form-item label="每人最大普通图书借阅数:" prop="maxNormalBooksPerUser">
-              <el-input-number v-model="borrowRuleForm.maxNormalBooksPerUser" :min="1" :max="20" />
-            </el-form-item>
-            
-            <el-form-item label="每人最大特殊图书借阅数:" prop="maxSpecialBooksPerUser">
-              <el-input-number v-model="borrowRuleForm.maxSpecialBooksPerUser" :min="0" :max="10" />
-            </el-form-item>
-            
-            <h4 class="form-subtitle">逾期规则</h4>
-            
-            <el-form-item label="每天逾期费用(元):" prop="overdueFeePerDay">
-              <el-input-number v-model="borrowRuleForm.overdueFeePerDay" :min="0" :max="10" :precision="2" :step="0.1" />
-            </el-form-item>
-            
-            <el-form-item label="图书损坏赔偿倍率:" prop="damageFeeRate">
-              <el-input-number v-model="borrowRuleForm.damageFeeRate" :min="1" :max="5" :precision="1" :step="0.1" />
-              <span class="form-help-text">图书价格的倍数</span>
-            </el-form-item>
-            
-            <el-form-item label="最大逾期天数限制:" prop="maxOverdueDays">
-              <el-input-number v-model="borrowRuleForm.maxOverdueDays" :min="1" :max="90" />
-              <span class="form-help-text">超过此天数将暂停借阅权限</span>
-            </el-form-item>
-            
-            <el-form-item>
-              <el-button type="primary" @click="submitForm('borrowRule')" :loading="loading">保存规则</el-button>
-              <el-button @click="borrowRuleFormRef.resetFields()">重置</el-button>
-            </el-form-item>
-          </el-form>
+            <el-form ref="borrowRuleFormRef" :model="borrowRuleForm" :rules="borrowRuleFormRules" label-position="top" size="default" class="settings-form">
+              <el-collapse accordion>
+                <el-collapse-item name="1">
+                  <template #title>
+                    <div class="collapse-title">
+                      <el-icon><Calendar /></el-icon>
+                      <span>借阅期限</span>
+                    </div>
+                  </template>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="普通图书借阅天数" prop="normalBookPeriod">
+                        <el-input-number
+                          v-model="borrowRuleForm.normalBookPeriod"
+                          :min="1"
+                          :max="100"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">读者可借阅普通图书的最长天数</div>
+                      </el-form-item>
+                    </el-col>
+                    
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="特殊图书借阅天数" prop="specialBookPeriod">
+                        <el-input-number
+                          v-model="borrowRuleForm.specialBookPeriod"
+                          :min="1"
+                          :max="60"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">读者可借阅特殊图书（如珍本）的最长天数</div>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </el-collapse-item>
+                
+                <el-collapse-item name="2">
+                  <template #title>
+                    <div class="collapse-title">
+                      <el-icon><Refresh /></el-icon>
+                      <span>续借规则</span>
+                    </div>
+                  </template>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="普通图书最大续借次数" prop="normalBookMaxRenewals">
+                        <el-input-number
+                          v-model="borrowRuleForm.normalBookMaxRenewals"
+                          :min="0"
+                          :max="10"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                      </el-form-item>
+                    </el-col>
+                    
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="特殊图书最大续借次数" prop="specialBookMaxRenewals">
+                        <el-input-number
+                          v-model="borrowRuleForm.specialBookMaxRenewals"
+                          :min="0"
+                          :max="5"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="普通图书续借天数" prop="normalBookRenewalDays">
+                        <el-input-number
+                          v-model="borrowRuleForm.normalBookRenewalDays"
+                          :min="1"
+                          :max="60"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">每次续借可延长的天数</div>
+                      </el-form-item>
+                    </el-col>
+                    
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="特殊图书续借天数" prop="specialBookRenewalDays">
+                        <el-input-number
+                          v-model="borrowRuleForm.specialBookRenewalDays"
+                          :min="1"
+                          :max="30"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">每次续借可延长的天数</div>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </el-collapse-item>
+                
+                <el-collapse-item name="3">
+                  <template #title>
+                    <div class="collapse-title">
+                      <el-icon><Files /></el-icon>
+                      <span>借阅限制</span>
+                    </div>
+                  </template>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="每人最大普通图书借阅数" prop="maxNormalBooksPerUser">
+                        <el-input-number
+                          v-model="borrowRuleForm.maxNormalBooksPerUser"
+                          :min="1"
+                          :max="20"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">每个用户可同时借阅的普通图书最大数量</div>
+                      </el-form-item>
+                    </el-col>
+                    
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="每人最大特殊图书借阅数" prop="maxSpecialBooksPerUser">
+                        <el-input-number
+                          v-model="borrowRuleForm.maxSpecialBooksPerUser"
+                          :min="0"
+                          :max="10"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">每个用户可同时借阅的特殊图书最大数量</div>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </el-collapse-item>
+                
+                <el-collapse-item name="4">
+                  <template #title>
+                    <div class="collapse-title">
+                      <el-icon><Warning /></el-icon>
+                      <span>逾期规则</span>
+                    </div>
+                  </template>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="每天逾期费用(元)" prop="overdueFeePerDay">
+                        <el-input-number
+                          v-model="borrowRuleForm.overdueFeePerDay"
+                          :min="0"
+                          :max="10"
+                          :precision="2"
+                          :step="0.1"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">逾期归还每天收取的费用</div>
+                      </el-form-item>
+                    </el-col>
+                    
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="图书损坏赔偿倍率" prop="damageFeeRate">
+                        <el-input-number
+                          v-model="borrowRuleForm.damageFeeRate"
+                          :min="1"
+                          :max="5"
+                          :precision="1"
+                          :step="0.1"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">图书损坏时按原价的倍数赔偿</div>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                  
+                  <el-row :gutter="30">
+                    <el-col :xs="24" :sm="12">
+                      <el-form-item label="最大逾期天数限制" prop="maxOverdueDays">
+                        <el-input-number
+                          v-model="borrowRuleForm.maxOverdueDays"
+                          :min="1"
+                          :max="90"
+                          controls-position="right"
+                          style="width: 100%"
+                        />
+                        <div class="form-tip">超过此天数将暂停用户的借阅权限</div>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </el-collapse-item>
+              </el-collapse>
+              
+              <div class="form-actions">
+                <el-button plain @click="borrowRuleFormRef.resetFields()">
+                  <el-icon><RefreshLeft /></el-icon>重置
+                </el-button>
+                <el-button type="primary" @click="submitForm('borrowRule')" :loading="loading">
+                  <el-icon><Check /></el-icon>保存规则
+                </el-button>
+              </div>
+            </el-form>
+          </div>
         </el-tab-pane>
         
         <!-- 通知设置 -->
@@ -667,19 +925,35 @@ const resetSystem = () => {
 
 <style scoped lang="scss">
 .settings-page {
-  padding: 20px;
-  background-color: #f5f7fa;
-  min-height: 100%;
+  padding: 24px;
+  background-color: #f9f6f2;
+  min-height: 100vh;
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+    border: none;
     
     .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
       .header-title {
         h2 {
-          font-size: 22px;
+          font-size: 24px;
           color: #3d2c29;
           margin: 0 0 5px 0;
+          display: flex;
+          align-items: center;
+          
+          .el-icon {
+            margin-right: 8px;
+            color: #8a5f41;
+          }
         }
         
         p {
@@ -688,12 +962,43 @@ const resetSystem = () => {
           margin: 0;
         }
       }
+      
+      .header-actions {
+        .el-button {
+          padding: 12px 24px;
+          border-radius: 8px;
+        }
+      }
     }
   }
   
   .settings-container {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+    border: none;
+    
     .settings-tabs {
-      min-height: 500px;
+      min-height: 600px;
+      
+      :deep(.el-tabs__header) {
+        background-color: #f5f0e8;
+      }
+      
+      :deep(.el-tabs__item) {
+        height: 56px;
+        line-height: 56px;
+        
+        &.is-active {
+          color: #8a5f41;
+          font-weight: 600;
+        }
+        
+        &:hover {
+          color: #8a5f41;
+        }
+      }
       
       .tab-label {
         display: flex;
@@ -701,112 +1006,209 @@ const resetSystem = () => {
         
         .el-icon {
           margin-right: 8px;
-          font-size: 16px;
+          font-size: 18px;
         }
+      }
+      
+      .tab-content {
+        padding: 20px;
       }
     }
   }
   
-  .section-title {
-    font-size: 20px;
-    color: #3d2c29;
-    margin: 0 0 20px 0;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ebeef5;
+  .section-header {
+    margin-bottom: 24px;
+    
+    .section-title {
+      font-size: 20px;
+      color: #3d2c29;
+      margin: 0 0 8px 0;
+    }
+    
+    .section-desc {
+      font-size: 14px;
+      color: #8a5f41;
+      margin: 0;
+    }
+  }
+  
+  .settings-form {
+    max-width: 1200px;
+    
+    .el-form-item {
+      margin-bottom: 24px;
+      
+      :deep(.el-form-item__label) {
+        color: #3d2c29;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      
+      :deep(.el-input__wrapper) {
+        border-radius: 8px;
+        box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+        
+        &:hover, &.is-focus {
+          box-shadow: 0 0 0 1px #8a5f41 inset;
+        }
+      }
+      
+      .form-tip {
+        font-size: 12px;
+        color: #8a5f41;
+        margin-top: 4px;
+      }
+    }
   }
   
   .form-subtitle {
     font-size: 16px;
     color: #8a5f41;
-    margin: 20px 0 15px 0;
+    margin: 24px 0 16px 0;
   }
   
-  .form-help-text {
-    font-size: 12px;
-    color: #909399;
-    margin-left: 10px;
-  }
-  
-  .logo-uploader {
-    .logo-preview {
-      width: 100px;
-      height: 100px;
-      display: block;
-      object-fit: contain;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-    }
-    
-    .logo-placeholder {
-      width: 100px;
-      height: 100px;
-      border: 1px dashed #dcdfe6;
-      border-radius: 4px;
-      color: #8c939d;
-      font-size: 28px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #fbfdff;
-    }
-    
-    .upload-tip {
-      font-size: 12px;
-      color: #606266;
-      margin-top: 8px;
-    }
-  }
-  
-  .action-bar {
-    margin-top: 20px;
-    text-align: right;
-  }
-  
-  .role-permissions-container {
-    margin-top: 20px;
-  }
-  
-  .log-actions {
-    margin-bottom: 15px;
-    text-align: right;
-  }
-  
-  .pagination-container {
-    margin-top: 20px;
-    text-align: right;
-  }
-  
-  .card-header {
+  .form-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(138, 95, 65, 0.2);
+    gap: 12px;
+    
+    .el-button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      
+      &:hover {
+        transform: translateY(-2px);
+        transition: transform 0.3s;
+      }
+    }
+  }
+  
+  .logo-upload-container {
+    .logo-uploader {
+      :deep(.el-upload) {
+        border-radius: 8px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+        
+        &:hover {
+          border-color: #8a5f41;
+        }
+      }
+      
+      :deep(.el-upload-dragger) {
+        width: 100%;
+        height: auto;
+        background-color: #f9f6f2;
+        border: 1px dashed rgba(138, 95, 65, 0.3);
+        border-radius: 8px;
+        
+        &:hover {
+          border-color: #8a5f41;
+          background-color: #f5f0e8;
+        }
+      }
+      
+      .logo-preview {
+        width: 120px;
+        height: 120px;
+        display: block;
+        object-fit: contain;
+      }
+      
+      .logo-placeholder {
+        width: 100%;
+        padding: 30px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        
+        .upload-icon {
+          font-size: 40px;
+          color: #8a5f41;
+          margin-bottom: 16px;
+        }
+        
+        .upload-text {
+          font-size: 14px;
+          color: #8a5f41;
+        }
+      }
+    }
+  }
+  
+  .collapse-title {
+    display: flex;
     align-items: center;
+    
+    .el-icon {
+      margin-right: 8px;
+      color: #8a5f41;
+    }
+    
+    span {
+      font-weight: 500;
+    }
   }
   
-  .danger-zone {
-    color: #f56c6c;
-    font-weight: bold;
+  :deep(.el-collapse-item__header) {
+    padding: 0 16px;
+    font-size: 16px;
+    color: #3d2c29;
+    height: 56px;
+    line-height: 56px;
+    
+    &.is-active {
+      color: #8a5f41;
+    }
   }
   
-  .warning-text {
-    color: #e6a23c;
-    font-size: 14px;
-  }
-  
-  .danger-actions {
-    margin-top: 15px;
+  :deep(.el-collapse-item__content) {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 0 0 8px 8px;
   }
 }
 
 // 响应式调整
 @media (max-width: 768px) {
   .settings-page {
-    padding: 10px;
+    padding: 16px;
+    
+    .page-header {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        
+        .header-actions {
+          width: 100%;
+          
+          .el-button {
+            width: 100%;
+          }
+        }
+      }
+    }
     
     .settings-container {
       .settings-tabs {
         :deep(.el-tabs__header) {
           width: 100%;
         }
+      }
+    }
+    
+    .form-actions {
+      flex-direction: column;
+      
+      .el-button {
+        width: 100%;
       }
     }
   }
