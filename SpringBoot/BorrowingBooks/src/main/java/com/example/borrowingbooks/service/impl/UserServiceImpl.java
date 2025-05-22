@@ -131,6 +131,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             log.error("Redis 写入失败，TokenKey: {}, UserInfoKey: {}", TokenKey, UserInfoKey);
             return Result.fail("Redis 写入失败");
         }
+        log.info("用户登录成功：{}", build);
         return Result.ok(build);
     }
 

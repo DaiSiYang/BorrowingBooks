@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Search, Edit, Delete, View, Download, List, Grid, RefreshLeft } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {BookListAPI} from "@/api/Book.js";
+import { Search, Edit, Delete, View, Download, List, Grid, RefreshLeft, Sort } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, ElDialog, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElDatePicker, ElInputNumber } from 'element-plus'
+import {BookListAPI, EditBookAPI} from "@/api/Book.js";
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -155,14 +155,136 @@ const viewBookDetail = (row) => {
   })
 }
 
+// 编辑表单数据和相关状态
+const editDialogVisible = ref(false)
+const editFormRef = ref(null)
+const saveLoading = ref(false)
+const currentEditId = ref(null)
+
+const editForm = reactive({
+  title: '',
+  author: '',
+  isbn: '',
+  categoryId: '',
+  publishDate: '',
+  publisher: '',
+  description: '',
+  location: '',
+  status: '',
+  stock: 0,
+  coverImage: ''
+})
+
+// 编辑表单验证规则
+const editRules = {
+  title: [
+    { required: true, message: '请输入图书名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
+  ],
+  author: [
+    { required: true, message: '请输入作者', trigger: 'blur' }
+  ],
+  isbn: [
+    { required: true, message: '请输入ISBN', trigger: 'blur' },
+    { pattern: /^[0-9-]{10,17}$/, message: '请输入正确的ISBN格式', trigger: 'blur' }
+  ],
+  categoryId: [
+    { required: true, message: '请选择图书分类', trigger: 'change' }
+  ],
+  publishDate: [
+    { required: true, message: '请选择出版日期', trigger: 'change' }
+  ],
+  publisher: [
+    { required: true, message: '请输入出版社', trigger: 'blur' }
+  ],
+  location: [
+    { required: true, message: '请输入馆藏位置', trigger: 'blur' }
+  ],
+  status: [
+    { required: true, message: '请选择图书状态', trigger: 'change' }
+  ],
+  stock: [
+    { required: true, message: '请输入库存数量', trigger: 'blur' },
+    { type: 'number', min: 0, message: '库存不能小于0', trigger: 'blur' }
+  ]
+}
+
 // 编辑图书
 const editBook = (row) => {
   console.log('编辑图书:', row)
-  ElMessage({
-    type: 'warning',
-    message: `正在编辑《${row.title}》`
+  currentEditId.value = row.id
+  
+  // 填充表单数据
+  Object.keys(editForm).forEach(key => {
+    if (key in row) {
+      // 确保categoryId和status是字符串类型
+      if (key === 'categoryId' || key === 'status') {
+        editForm[key] = String(row[key])
+      } else {
+        editForm[key] = row[key]
+      }
+    }
   })
-  // 跳转到编辑页或打开编辑对话框
+  
+  // 显示编辑对话框
+  editDialogVisible.value = true
+}
+
+// 保存编辑
+const handleSaveEdit = async () => {
+  if (!editFormRef.value) return
+  
+  editFormRef.value.validate(async (valid) => {
+    if (valid) {
+      saveLoading.value = true
+      try {
+        // 发送API请求保存数据
+        const bookData = {...editForm}
+        // 确保数据类型正确
+        if (bookData.stock) bookData.stock = Number(bookData.stock)
+        if (bookData.categoryId) bookData.categoryId = Number(bookData.categoryId)
+        if (bookData.status) bookData.status = Number(bookData.status)
+        
+        const res = await EditBookAPI(currentEditId.value, bookData)
+        
+        if (res && res.code === 200) {
+          // 更新本地数据
+          const index = allBooks.value.findIndex(book => book.id === currentEditId.value)
+          if (index !== -1) {
+            const updatedBook = {...allBooks.value[index], ...editForm}
+            
+            // 更新状态文本和类型
+            const statusInfo = getStatusInfo(updatedBook.status)
+            updatedBook.statusText = statusInfo.text
+            updatedBook.statusType = statusInfo.type
+            
+            // 更新分类名称
+            updatedBook.categoryName = getCategoryName(updatedBook.categoryId)
+            
+            allBooks.value[index] = updatedBook
+          }
+          
+          ElMessage({
+            type: 'success',
+            message: `成功更新《${editForm.title}》的信息`
+          })
+          
+          // 刷新图书列表
+          fetchAllBooks()
+          
+          // 关闭对话框
+          editDialogVisible.value = false
+        } else {
+          ElMessage.error(res?.message || '更新失败，请稍后重试')
+        }
+      } catch (error) {
+        console.error('更新图书失败:', error)
+        ElMessage.error('更新图书失败，请稍后重试')
+      } finally {
+        saveLoading.value = false
+      }
+    }
+  })
 }
 
 // 删除图书
@@ -276,6 +398,34 @@ const fetchAllBooks = async () => {
   }
 }
 
+// 随机排序图书列表
+const randomizeBooks = () => {
+  loading.value = true
+  setTimeout(() => {
+    // 复制一份数组，不直接修改原数组
+    const randomizedBooks = [...allBooks.value]
+    
+    // Fisher-Yates 洗牌算法随机排序
+    for (let i = randomizedBooks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[randomizedBooks[i], randomizedBooks[j]] = [randomizedBooks[j], randomizedBooks[i]]
+    }
+    
+    // 更新图书列表
+    allBooks.value = randomizedBooks
+    
+    // 重置到第一页
+    pagination.currentPage = 1
+    
+    ElMessage({
+      type: 'success',
+      message: '图书列表已随机排序'
+    })
+    
+    loading.value = false
+  }, 300) // 短暂延迟，显示加载效果
+}
+
 onMounted(() => {
   // 组件加载时获取所有图书数据
   fetchAllBooks()
@@ -287,6 +437,9 @@ onMounted(() => {
     <div class="page-header">
       <h2 class="page-title">图书列表</h2>
       <div class="action-buttons">
+        <el-button @click="randomizeBooks" class="random-button" :loading="loading">
+          <el-icon><Sort /></el-icon>随机排序
+        </el-button>
         <el-button @click="exportBooks" class="export-button">
           <el-icon><Download /></el-icon>导出列表
         </el-button>
@@ -585,6 +738,113 @@ onMounted(() => {
     >
       <el-button type="primary" @click="$router.push('/home/add-book')">添加图书</el-button>
     </el-empty>
+    
+    <!-- 编辑图书对话框 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑图书信息"
+      width="650px"
+      :close-on-click-modal="false"
+      :destroy-on-close="true"
+    >
+      <el-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="editRules"
+        label-width="100px"
+        class="edit-form"
+      >
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="图书名称" prop="title">
+              <el-input v-model="editForm.title" placeholder="请输入图书名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="作者" prop="author">
+              <el-input v-model="editForm.author" placeholder="请输入作者" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="ISBN" prop="isbn">
+              <el-input v-model="editForm.isbn" placeholder="请输入ISBN" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="分类" prop="categoryId">
+              <el-select v-model="editForm.categoryId" placeholder="请选择分类" style="width: 100%">
+                <el-option
+                  v-for="item in categoryOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="出版日期" prop="publishDate">
+              <el-date-picker
+                v-model="editForm.publishDate"
+                type="date"
+                placeholder="选择出版日期"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="出版社" prop="publisher">
+              <el-input v-model="editForm.publisher" placeholder="请输入出版社" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="馆藏位置" prop="location">
+              <el-input v-model="editForm.location" placeholder="请输入馆藏位置" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态" prop="status">
+              <el-select v-model="editForm.status" placeholder="请选择状态" style="width: 100%">
+                <el-option
+                  v-for="item in statusOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="库存" prop="stock">
+              <el-input-number
+                v-model="editForm.stock"
+                :min="0"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSaveEdit" :loading="saveLoading">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -625,6 +885,23 @@ onMounted(() => {
     .action-buttons {
       display: flex;
       gap: 12px;
+      
+      .random-button {
+        border: 1px solid #4c8dae;
+        color: #4c8dae;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s;
+        
+        &:hover {
+          background-color: rgba(76, 141, 174, 0.05);
+          transform: translateY(-2px);
+        }
+        
+        .el-icon {
+          margin-right: 6px;
+        }
+      }
       
       .export-button {
         border: 1px solid #8a5f41;
@@ -889,6 +1166,28 @@ onMounted(() => {
       &:hover {
         background-color: #6e4c34;
       }
+    }
+  }
+}
+
+// 编辑表单样式
+.edit-form {
+  .el-row {
+    margin-bottom: 15px;
+  }
+  
+  :deep(.el-form-item__label) {
+    color: #3d2c29;
+    font-weight: 500;
+  }
+  
+  :deep(.el-input__wrapper),
+  :deep(.el-textarea__inner) {
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(138, 95, 65, 0.2) inset;
+    
+    &:hover, &.is-focus {
+      box-shadow: 0 0 0 1px #8a5f41 inset;
     }
   }
 }

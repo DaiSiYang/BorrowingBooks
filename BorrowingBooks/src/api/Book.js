@@ -64,3 +64,25 @@ export const DeleteBookAPI = async (id) => {
         throw e;
     }
 }
+
+// 根据ID获取图书API
+export const GetBookByIdAPI = async (id) => {
+    try {
+        return await http.get(`/book/${id}`);
+    } catch (e) {
+        console.error('获取图书信息失败:', e);
+        throw e;
+    }
+}
+
+// 编辑图书API
+export const EditBookAPI = async (id, data) => {
+    try {
+        // 确保data中包含id字段
+        const bookData = { ...data, id };
+        return await http.put('/book', bookData);
+    } catch (e) {
+        console.error('编辑图书失败:', e);
+        throw e;
+    }
+}

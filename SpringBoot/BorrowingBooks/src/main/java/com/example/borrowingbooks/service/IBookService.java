@@ -1,5 +1,6 @@
 package com.example.borrowingbooks.service;
 
+import com.example.borrowingbooks.DTO.BookDTO;
 import com.example.borrowingbooks.DTO.PageDTO;
 import com.example.borrowingbooks.VO.BookVO;
 import com.example.borrowingbooks.common.Result;
@@ -25,4 +26,6 @@ public interface IBookService extends IService<Book> {
     Result<String> borrow(Long id);
 
     Result<String> deleteBook(Long id);
+
+    Result<String> updateBook(BookDTO bookDTO);
 }

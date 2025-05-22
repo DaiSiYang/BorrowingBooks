@@ -3,6 +3,7 @@ package com.example.borrowingbooks.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
+import com.example.borrowingbooks.DTO.BookDTO;
 import com.example.borrowingbooks.DTO.PageDTO;
 import com.example.borrowingbooks.VO.BookVO;
 import com.example.borrowingbooks.common.RedisLock;
@@ -17,6 +18,7 @@ import com.example.borrowingbooks.service.IBorrowRecordService;
 import com.example.borrowingbooks.utils.RedisUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +52,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
 
     @Override
     public Result<List<BookVO>> getAllBook(PageDTO pageDTO) {
-        String cacheKey = BOOK_LIST + ":" + pageDTO.getCurrentPage() + ":" + pageDTO.getPageSize();
+        String cacheKey = BOOK_LIST;
         List<BookVO> jsonList = redis.getJsonList(cacheKey, BookVO.class);
         if (jsonList != null){
             log.info("从 Redis 中获取数据");
@@ -175,5 +177,26 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
         }
         redis.delete(BOOK_LIST);
         return Result.fail("删除失败");
+    }
+
+    @Override
+    public Result<String> updateBook(BookDTO bookDTO) {
+        if (bookDTO == null){
+            return Result.fail("图书信息不存在");
+        }
+        if (bookDTO.getId() == null){
+            return Result.fail("图书ID不存在");
+        }
+        Book book = new Book();
+        BeanUtils.copyProperties(bookDTO, book);
+        boolean b = this.updateById(book);
+        if (b){
+            log.info("图书 {} 更新成功", bookDTO.getId());
+            redis.delete(BOOK_LIST);
+            log.info("删除缓存 {}", BOOK_LIST);
+            return Result.ok("更新成功");
+        }
+        log.info("图书 {} 更新失败", bookDTO.getId());
+        return Result.fail("更新失败");
     }
 }

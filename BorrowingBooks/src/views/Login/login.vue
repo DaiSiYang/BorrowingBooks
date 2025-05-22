@@ -53,8 +53,9 @@ const handleLogin = async () => {
     })
     return false
   }
+  try {
   const result = await LoginAPI(loginForm)
-  if (result.code === 200){
+    if (result && result.code === 200){
     // 登录逻辑
     console.log(result)
     tokenStore.setToken(result.data.token)
@@ -72,8 +73,23 @@ const handleLogin = async () => {
     setTimeout(() => {
       router.push({ name: 'home' })
     }, 1000)
+    } else {
+      ElNotification({
+        title: '登录失败',
+        message: result?.message || '服务器响应异常',
+        type: 'error',
+        duration: 3000
+      })
+    }
+  } catch (error) {
+    console.error('登录出错:', error)
+    ElNotification({
+      title: '登录失败',
+      message: '服务连接异常，请稍后重试',
+      type: 'error',
+      duration: 3000
+    })
   }
-
 }
 
 // 注册和找回密码的处理函数

@@ -61,6 +61,8 @@ CREATE TABLE `book` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书表';
 ALTER TABLE `book`
     ADD COLUMN `stock` int(11) NOT NULL DEFAULT 10 COMMENT '库存数量';
+ALTER TABLE `book`
+    ADD COLUMN `description` VARCHAR(500) NOT NULL DEFAULT '这个管理员很懒,还没有写简介' COMMENT '图书简介';
 
 -- ----------------------------
 -- 借阅记录表结构（添加逻辑删除）

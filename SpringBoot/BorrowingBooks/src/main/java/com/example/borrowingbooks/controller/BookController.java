@@ -1,6 +1,7 @@
 package com.example.borrowingbooks.controller;
 
 
+import com.example.borrowingbooks.DTO.BookDTO;
 import com.example.borrowingbooks.DTO.PageDTO;
 import com.example.borrowingbooks.VO.BookVO;
 import com.example.borrowingbooks.common.Result;
@@ -49,5 +50,10 @@ public class BookController {
     public Result<String> deleteBook(@PathVariable Long id) {
         log.info("删除图书 {}", id);
         return bookService.deleteBook(id);
+    }
+    @PutMapping()
+    public Result<String> updateBook(@RequestBody BookDTO bookDTO) {
+        log.info("更新图书 {}", bookDTO);
+        return bookService.updateBook(bookDTO);
     }
 }
