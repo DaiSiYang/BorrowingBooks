@@ -150,10 +150,13 @@ const borrowRules = ref([
 // 热门图书数据
 const popularBooks = ref([])
 const carouselBooks = ref([])
+const loadingBooks = ref(true)
+const loadingCarousel = ref(true)
 
 // 获取热门图书数据
 const fetchHotBooks = async () => {
   try {
+    loadingBooks.value = true
     const response = await HotBooksListAPI()
     console.log('热门图书数据:', response)
     const { data: hotBooksData } = response
@@ -179,12 +182,15 @@ const fetchHotBooks = async () => {
         desc: '描绘了人类文明与三体文明的信息交流、生死搏杀及两个文明若干次的生死存亡的历程。'
       }
     ]
+  } finally {
+    loadingBooks.value = false
   }
 }
 
 // 获取轮播图数据
 const fetchCarouselBooks = async () => {
   try {
+    loadingCarousel.value = true
     const response = await HotBookCarouselAPI()
     console.log('热门图书轮播图数据:', response)
     const { data: carouselData } = response
@@ -193,10 +199,12 @@ const fetchCarouselBooks = async () => {
     console.error('获取热门图书轮播图数据失败:', error)
     // 使用热门图书数据作为备用
     carouselBooks.value = popularBooks.value
+  } finally {
+    loadingCarousel.value = false
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   setGreeting()
   // 每分钟更新一次时间
   setInterval(() => {
@@ -205,8 +213,14 @@ onMounted(() => {
   }, 60000)
   
   // 获取热门图书数据和轮播图数据
-  fetchHotBooks()
-  fetchCarouselBooks()
+  try {
+    await Promise.all([fetchHotBooks(), fetchCarouselBooks()])
+  } catch (error) {
+    console.error('获取数据失败:', error)
+    // 确保加载状态结束
+    loadingBooks.value = false
+    loadingCarousel.value = false
+  }
 })
 </script>
 
@@ -307,7 +321,7 @@ onMounted(() => {
     <div class="popular-section">
       <h2 class="section-title">热门图书</h2>
       
-      <el-carousel :interval="4000" type="card" height="380px" class="book-carousel" v-loading="!carouselBooks.length">
+      <el-carousel :interval="4000" type="card" height="380px" class="book-carousel" v-loading="loadingCarousel">
         <el-carousel-item v-for="book in carouselBooks" :key="book.id" class="carousel-item">
           <div class="featured-book-card">
             <div class="book-cover">
@@ -349,7 +363,7 @@ onMounted(() => {
         </el-carousel-item>
       </el-carousel>
       
-      <div class="popular-books" v-loading="!popularBooks.length">
+      <div class="popular-books" v-loading="loadingBooks">
         <div v-for="book in popularBooks" :key="book.id" class="book-card">
           <div class="book-inner">
             <div class="book-cover">
