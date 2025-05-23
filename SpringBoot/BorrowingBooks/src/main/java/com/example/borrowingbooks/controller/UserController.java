@@ -2,16 +2,16 @@ package com.example.borrowingbooks.controller;
 
 
 import com.example.borrowingbooks.DTO.UserDTO;
+import com.example.borrowingbooks.VO.UserJurisdictionVO;
 import com.example.borrowingbooks.VO.UserVO;
 import com.example.borrowingbooks.common.Result;
+import com.example.borrowingbooks.entity.User;
 import com.example.borrowingbooks.service.IUserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * <p>
@@ -39,5 +39,23 @@ public class UserController {
     public Result<UserVO> login(@RequestBody UserDTO userDTO) {
         log.info("login userDTO: {}", userDTO);
         return userService.login(userDTO);
+    }
+
+    @GetMapping()
+    public Result<List<UserJurisdictionVO>> getUserJurisdiction() {
+        log.info("获取全部用户信息及权限信息");
+        return userService.getUserJurisdiction();
+    }
+
+    @PutMapping("/update")
+    public Result<String> update(@RequestBody User user) {
+        log.info("update user: {}", user);
+        return userService.updateUser(user);
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<String> delete(@PathVariable Long id) {
+        log.info("delete user id: {}", id);
+        return userService.deleteUser(id);
     }
 }

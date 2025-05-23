@@ -1,11 +1,16 @@
 package com.example.borrowingbooks.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.borrowingbooks.DTO.UserDTO;
+import com.example.borrowingbooks.VO.PermissionVO;
+import com.example.borrowingbooks.VO.UserJurisdictionVO;
 import com.example.borrowingbooks.VO.UserVO;
 import com.example.borrowingbooks.common.Result;
 import com.example.borrowingbooks.entity.LoginUser;
+import com.example.borrowingbooks.entity.Permission;
 import com.example.borrowingbooks.entity.User;
 import com.example.borrowingbooks.mapper.UserMapper;
+import com.example.borrowingbooks.service.IPermissionService;
 import com.example.borrowingbooks.service.IUserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.borrowingbooks.utils.JwtUtil;
@@ -20,8 +25,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.example.borrowingbooks.common.RedisExpireTime.USER_INFO;
 import static com.example.borrowingbooks.common.RedisKeyConstants.User.INFO;
@@ -38,6 +45,7 @@ import static com.example.borrowingbooks.common.RedisKeyConstants.User.TOKEN;
 @Service
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
+    private final static String USER_ALL_INFO = "user:all:info";
 
     @Resource
     private RedisUtil  redisUtil;
@@ -50,6 +58,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     private JwtUtil jwtUtil;
+
+    @Resource
+    private IPermissionService permissionService;
 
     @Override
     public Result<String> register(UserDTO userDTO) {
@@ -133,6 +144,97 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         log.info("用户登录成功：{}", build);
         return Result.ok(build);
+    }
+
+    @Override
+    public Result<List<UserJurisdictionVO>> getUserJurisdiction() {
+
+        List<UserJurisdictionVO> jsonList = redisUtil.getJsonList(USER_ALL_INFO, UserJurisdictionVO.class);
+        if (jsonList != null){
+            log.info("从Redis中获取用户权限");
+            return Result.ok(jsonList);
+        }
+        log.info("从数据库中获取用户权限");
+        List<User> users = this.list();
+        if (users.isEmpty()) {
+            log.error("用户为空");
+            redisUtil.setJson(USER_ALL_INFO, Collectors.toList(), 2);
+            return Result.fail("用户为空");
+        }
+
+        List<UserJurisdictionVO> resultList = users.stream().map(user -> {
+            List<Permission> permissions = permissionService.list(
+                    new LambdaQueryWrapper<Permission>()
+                            .eq(Permission::getRoleId, user.getRoleId())
+            );
+
+            List<PermissionVO> permissionVOS = permissions.stream().map(p -> {
+                return PermissionVO.builder()
+                        .permissionCode(p.getPermissionCode())
+                        .permissionName(p.getPermissionName())
+                        .description(p.getDescription())
+                        .build();
+            }).collect(Collectors.toList());
+
+            return UserJurisdictionVO.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .phone(user.getPhone())
+                    .email(user.getEmail())
+                    .roleId(user.getRoleId())
+                    .createTime(user.getCreateTime())
+                    .avatarUrl(user.getAvatarUrl())
+                    .roleName(permissions.isEmpty() ? null : permissions.get(0).getRoleName())
+                    .permissions(permissionVOS)
+                    .build();
+        }).collect(Collectors.toList());
+        log.info("获取用户权限成功：{}", resultList);
+        boolean json = redisUtil.setJson(USER_ALL_INFO, resultList, 30);
+        if (!json){
+            log.error("Redis 写入失败，Key: {}", USER_ALL_INFO);
+            return Result.fail("Redis 写入失败");
+        }
+        return Result.ok(resultList);
+    }
+
+    @Override
+    public Result<String> updateUser(User user) {
+        if (user == null){
+            log.error("用户不能为空");
+            return Result.fail("用户不能为空");
+        }
+        if (user.getId() == null){
+            log.error("用户ID不能为空");
+            return Result.fail("用户ID不能为空");
+        }
+        boolean byId = this.updateById(user);
+        if (!byId){
+            log.error("用户 {} 更新失败", user.getId());
+            return Result.fail("用户更新失败");
+        }
+        boolean delete = redisUtil.delete(USER_ALL_INFO);
+        if (!delete){
+            log.error("删除缓存 {} 失败", USER_ALL_INFO);
+        }
+        return Result.ok("用户更新成功");
+    }
+
+    @Override
+    public Result<String> deleteUser(Long id) {
+        if (id == null){
+            log.error("用户ID不能为空");
+            return Result.fail("用户ID不能为空");
+        }
+        boolean delete = this.removeById(id);
+        if (!delete){
+            log.error("用户 {} 删除失败", id);
+            return Result.fail("用户删除失败");
+        }
+        boolean b = redisUtil.delete(USER_ALL_INFO);
+        if (!b){
+            log.error("删除缓存 {} 失败", USER_ALL_INFO);
+        }
+        return Result.ok("用户删除成功");
     }
 
     public static String generateUsername(String prefix, int length) {

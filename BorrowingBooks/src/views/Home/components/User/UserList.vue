@@ -66,6 +66,23 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="权限筛选">
+          <el-select
+            v-model="searchForm.permission"
+            placeholder="选择权限"
+            clearable
+            class="custom-select"
+            filterable
+          >
+            <el-option
+              v-for="item in permissionOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="创建时间">
           <el-date-picker
             v-model="searchForm.dateRange"
@@ -136,8 +153,43 @@
               effect="light"
               size="small"
             >
-              {{ getRoleLabel(scope.row.role) }}
+              {{ scope.row.roleName }}
             </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="permissions" label="权限" min-width="180">
+          <template #default="scope">
+            <div class="permissions-cell">
+              <el-tooltip
+                v-if="scope.row.permissions && scope.row.permissions.length > 0"
+                placement="top"
+                :content="getPermissionsText(scope.row.permissions)"
+              >
+                <div class="permissions-preview">
+                  <el-tag
+                    v-for="(perm, index) in scope.row.permissions.slice(0, 2)"
+                    :key="index"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    class="permission-tag"
+                  >
+                    {{ perm.permissionName }}
+                  </el-tag>
+                  <el-tag
+                    v-if="scope.row.permissions.length > 2"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    class="permission-tag"
+                  >
+                    +{{ scope.row.permissions.length - 2 }}
+                  </el-tag>
+                </div>
+              </el-tooltip>
+              <span v-else class="no-permissions">无权限</span>
+            </div>
           </template>
         </el-table-column>
 
@@ -149,21 +201,6 @@
               :inactive-value="0"
               @change="(val) => handleStatusChange(val, scope.row)"
             />
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="lastLogin" label="最后登录" width="160">
-          <template #default="scope">
-            <div class="last-login">
-              <span>{{ formatDate(scope.row.lastLogin) }}</span>
-              <el-tooltip
-                v-if="scope.row.lastLoginIp"
-                :content="scope.row.lastLoginIp"
-                placement="top"
-              >
-                <span class="ip-address">{{ scope.row.lastLoginIp }}</span>
-              </el-tooltip>
-            </div>
           </template>
         </el-table-column>
 
@@ -322,14 +359,15 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Download, RefreshLeft, Delete, Lock } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { getUserList } from '@/api/user.js'
 
 const router = useRouter()
 
 // 角色选项
 const roleOptions = [
-  { value: 'admin', label: '管理员' },
-  { value: 'operator', label: '操作员' },
-  { value: 'user', label: '普通用户' }
+  { value: 1, label: '管理员' },
+  { value: 2, label: '操作员' },
+  { value: 3, label: '普通用户' }
 ]
 
 // 状态选项
@@ -338,11 +376,28 @@ const statusOptions = [
   { value: 0, label: '禁用' }
 ]
 
+// 权限选项
+const permissionOptions = ref([
+  { value: 'user:view', label: '用户查看' },
+  { value: 'user:add', label: '用户添加' },
+  { value: 'user:edit', label: '用户编辑' },
+  { value: 'user:delete', label: '用户删除' },
+  { value: 'book:view', label: '图书查看' },
+  { value: 'book:add', label: '图书添加' },
+  { value: 'book:edit', label: '图书编辑' },
+  { value: 'book:delete', label: '图书删除' },
+  { value: 'borrow:view', label: '借阅查看' },
+  { value: 'borrow:add', label: '借阅申请' },
+  { value: 'borrow:approve', label: '借阅审批' },
+  { value: 'borrow:return', label: '借阅归还' }
+])
+
 // 搜索表单
 const searchForm = reactive({
   keyword: '',
   role: '',
   status: '',
+  permission: '',
   dateRange: []
 })
 
@@ -399,10 +454,127 @@ const userFormRules = {
   ]
 }
 
+// 全局存储已筛选的数据
+const filteredData = ref([])
+
 // 处理搜索
 const handleSearch = () => {
+  // 如果没有输入任何筛选条件，则从服务器获取数据
+  if (!searchForm.keyword && searchForm.role === '' && searchForm.status === '' && searchForm.permission === '' && (!searchForm.dateRange || searchForm.dateRange.length === 0)) {
+    pagination.currentPage = 1
+    fetchUserList()
+    return
+  }
+  
+  // 有筛选条件时，在前端筛选
+  loading.value = true
+  try {
+    // 前端筛选
+    filteredData.value = tableData.value.filter(user => {
+      // 关键词筛选 (用户名、昵称或手机号)
+      const keywordMatch = !searchForm.keyword || 
+        user.username.toLowerCase().includes(searchForm.keyword.toLowerCase()) || 
+        user.nickname.toLowerCase().includes(searchForm.keyword.toLowerCase()) || 
+        (user.phone && user.phone !== '未绑定' && user.phone.includes(searchForm.keyword))
+      
+      // 角色筛选
+      const roleMatch = searchForm.role === '' || user.role === Number(searchForm.role)
+      
+      // 状态筛选
+      const statusMatch = searchForm.status === '' || user.status === Number(searchForm.status)
+      
+      // 权限筛选
+      let permissionMatch = true
+      if (searchForm.permission) {
+        permissionMatch = user.permissions && user.permissions.some(p => 
+          p.permissionKey === searchForm.permission || 
+          p.permissionName.includes(searchForm.permission)
+        )
+      }
+      
+      // 日期范围筛选
+      let dateMatch = true
+      if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+        const createDate = user.createTime ? new Date(user.createTime) : null
+        if (createDate) {
+          const startDate = new Date(searchForm.dateRange[0])
+          const endDate = new Date(searchForm.dateRange[1])
+          // 设置endDate为当天的23:59:59
+          endDate.setHours(23, 59, 59, 999)
+          
+          dateMatch = createDate >= startDate && createDate <= endDate
+        } else {
+          dateMatch = false
+        }
+      }
+      
+      return keywordMatch && roleMatch && statusMatch && permissionMatch && dateMatch
+    })
+    
+    // 更新分页信息
+    pagination.total = filteredData.value.length
+    pagination.currentPage = 1
+    
+    // 分页处理
+    const start = 0
+    const end = Math.min(pagination.pageSize, filteredData.value.length)
+    tableData.value = filteredData.value.slice(start, end)
+    
+    if (filteredData.value.length === 0) {
+      ElMessage.info('没有找到符合条件的用户')
+    }
+  } catch (error) {
+    console.error('筛选出错:', error)
+    ElMessage.error('筛选过程中出现错误')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 处理分页变化
+const handleCurrentChange = (val) => {
+  pagination.currentPage = val
+  
+  // 如果有筛选条件，使用前端分页
+  if (searchForm.keyword || searchForm.role !== '' || searchForm.status !== '' || searchForm.permission !== '' || (searchForm.dateRange && searchForm.dateRange.length === 2)) {
+    handleFilterPagination()
+  } else {
+    // 无筛选条件，使用服务器分页
+    fetchUserList()
+  }
+}
+
+// 处理每页显示数量变化
+const handleSizeChange = (val) => {
+  pagination.pageSize = val
   pagination.currentPage = 1
-  fetchUserList()
+  
+  // 如果有筛选条件，使用前端分页
+  if (searchForm.keyword || searchForm.role !== '' || searchForm.status !== '' || searchForm.permission !== '' || (searchForm.dateRange && searchForm.dateRange.length === 2)) {
+    handleFilterPagination()
+  } else {
+    // 无筛选条件，使用服务器分页
+    fetchUserList()
+  }
+}
+
+// 前端筛选的分页处理
+const handleFilterPagination = () => {
+  loading.value = true
+  try {
+    // 更新分页信息
+    pagination.total = filteredData.value.length
+    
+    // 分页处理
+    const start = (pagination.currentPage - 1) * pagination.pageSize
+    const end = Math.min(start + pagination.pageSize, filteredData.value.length)
+    tableData.value = filteredData.value.slice(start, end)
+  } catch (error) {
+    console.error('筛选分页出错:', error)
+    ElMessage.error('筛选分页过程中出现错误')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 重置搜索
@@ -410,19 +582,9 @@ const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.role = ''
   searchForm.status = ''
+  searchForm.permission = ''
   searchForm.dateRange = []
-  handleSearch()
-}
-
-// 处理分页变化
-const handleCurrentChange = (val) => {
-  pagination.currentPage = val
-  fetchUserList()
-}
-
-// 处理每页显示数量变化
-const handleSizeChange = (val) => {
-  pagination.pageSize = val
+  filteredData.value = []
   pagination.currentPage = 1
   fetchUserList()
 }
@@ -453,7 +615,37 @@ const handleEdit = (row) => {
 
 // 处理查看详情
 const handleView = (row) => {
-  router.push(`/home/user/detail/${row.id}`)
+  // 构建权限信息文本
+  const permissionsText = row.permissions && row.permissions.length > 0
+    ? row.permissions.map(p => p.permissionName).join('、')
+    : '无权限';
+  
+  ElMessageBox.alert(
+    `<div class="user-detail-dialog">
+      <div class="avatar-container">
+        <img src="${row.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'}" class="user-avatar">
+      </div>
+      <div class="info-container">
+        <div class="info-item"><span class="label">用户名：</span>${row.username}</div>
+        <div class="info-item"><span class="label">昵称：</span>${row.nickname || '-'}</div>
+        <div class="info-item"><span class="label">邮箱：</span>${row.email || '-'}</div>
+        <div class="info-item"><span class="label">手机：</span>${row.phone}</div>
+        <div class="info-item"><span class="label">角色：</span>${row.roleName}</div>
+        <div class="info-item"><span class="label">状态：</span>${row.status === 1 ? '启用' : '禁用'}</div>
+        <div class="info-item"><span class="label">创建时间：</span>${row.createTime ? formatDate(row.createTime) : '-'}</div>
+        <div class="info-item">
+          <span class="label">权限：</span>
+          <div class="permissions-list">${permissionsText}</div>
+        </div>
+      </div>
+    </div>`,
+    '用户详情',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭',
+      customClass: 'user-detail-box'
+    }
+  );
 }
 
 // 处理删除用户
@@ -526,7 +718,7 @@ const handleStatusChange = (val, row) => {
 // 处理重置密码
 const handleResetPassword = (row) => {
   ElMessageBox.confirm(
-    `确定要重置用户"${row.username}"的密码吗？`,
+    `确定要重置用户"${row.username}"的密码吗？密码将被重置为: 244466666`,
     '重置密码确认',
     {
       confirmButtonText: '确定',
@@ -535,7 +727,11 @@ const handleResetPassword = (row) => {
     }
   ).then(() => {
     // TODO: 调用重置密码API
-    ElMessage.success('密码重置成功')
+    ElMessage({
+      type: 'success',
+      message: `密码重置成功，新密码为: 244466666`,
+      duration: 5000
+    })
   }).catch(() => {})
 }
 
@@ -562,11 +758,12 @@ const handleSubmit = async () => {
 }
 
 // 获取角色标签类型
-const getRoleTagType = (role) => {
-  switch (role) {
-    case 'admin': return 'danger'
-    case 'operator': return 'warning'
-    case 'user': return 'info'
+const getRoleTagType = (roleId) => {
+  // 基于roleId设置不同角色的标签类型
+  switch (Number(roleId)) {
+    case 1: return 'danger'  // 管理员
+    case 2: return 'warning' // 操作员
+    case 3: return 'info'    // 普通用户
     default: return 'info'
   }
 }
@@ -577,63 +774,100 @@ const getRoleLabel = (role) => {
   return option ? option.label : role
 }
 
+// 获取权限文本
+const getPermissionsText = (permissions) => {
+  if (!permissions || permissions.length === 0) {
+    return '无权限'
+  }
+  return permissions.map(p => p.permissionName).join('、')
+}
+
 // 格式化日期
 const formatDate = (date) => {
-  if (!date) return ''
-  if (typeof date === 'string') date = new Date(date)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  if (!date) return '-'
+  
+  try {
+    if (typeof date === 'string') {
+      // 如果已经是格式化的日期字符串，直接返回
+      if (date.includes('-') && date.length >= 10) {
+        // 只返回 YYYY-MM-DD 格式
+        return date.substring(0, 10)
+      }
+      date = new Date(date)
+    }
+    
+    // 确保date是有效的Date对象
+    if (isNaN(date.getTime())) {
+      return '-'
+    }
+    
+    // 返回标准格式 YYYY-MM-DD
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  } catch (error) {
+    console.error('日期格式化错误:', error)
+    return '-'
+  }
 }
 
 // 获取用户列表
 const fetchUserList = async () => {
   loading.value = true
   try {
-    // TODO: 调用用户列表API
-    // 模拟API调用
-    setTimeout(() => {
-      tableData.value = [
-        {
-          id: 1,
-          username: 'admin',
-          nickname: '系统管理员',
-          phone: '13800138000',
-          role: 'admin',
-          status: 1,
-          lastLogin: new Date(),
-          lastLoginIp: '192.168.1.1',
-          createTime: new Date('2023-01-01'),
-          avatar: ''
-        },
-        {
-          id: 2,
-          username: 'operator',
-          nickname: '图书管理员',
-          phone: '13800138001',
-          role: 'operator',
-          status: 1,
-          lastLogin: new Date(),
-          lastLoginIp: '192.168.1.2',
-          createTime: new Date('2023-02-01'),
-          avatar: ''
-        },
-        {
-          id: 3,
-          username: 'user1',
-          nickname: '张三',
-          phone: '13800138002',
-          role: 'user',
-          status: 0,
-          lastLogin: new Date(),
-          lastLoginIp: '192.168.1.3',
-          createTime: new Date('2023-03-01'),
-          avatar: ''
-        }
-      ]
-      pagination.total = 100
-      loading.value = false
-    }, 1000)
+    // 构建查询参数
+    const params = {
+      page: pagination.currentPage,
+      limit: pagination.pageSize,
+      keyword: searchForm.keyword,
+      roleId: searchForm.role, // 使用roleId作为查询参数
+      status: searchForm.status,
+    }
+    
+    // 处理日期范围
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
+    
+    // 调用API获取用户列表
+    const response = await getUserList(params)
+    console.log('获取用户列表接口响应:', response)
+    
+    // 判断接口返回是否成功
+    if (response && response.code === 200) {
+      // 直接使用response.data，它本身就是用户数组
+      const users = response.data || []
+      
+      // 处理用户数据，映射字段
+      tableData.value = users.map(user => ({
+        id: user.id,
+        username: user.username || '',
+        nickname: user.nickname || user.username || '',
+        phone: user.phone || '未绑定',
+        email: user.email || '-',
+        role: Number(user.roleId) || 0, // 确保roleId是数字
+        roleName: user.roleName || '未知',
+        status: user.status === undefined ? 1 : Number(user.status), // 确保status是数字
+        createTime: user.createTime || null,
+        avatar: user.avatarUrl || '',
+        permissions: user.permissions || []
+      }))
+      
+      // 设置分页总数 - 暂时使用实际返回的数据长度，后端可能未实现分页
+      pagination.total = users.length
+      
+      console.log('处理后的用户数据:', tableData.value)
+    } else {
+      // 显示错误消息
+      ElMessage.error(response?.msg || '获取用户列表失败')
+      tableData.value = []
+      pagination.total = 0
+    }
   } catch (error) {
     console.error('获取用户列表失败:', error)
+    ElMessage.error('获取用户列表失败，请稍后重试')
+    tableData.value = []
+    pagination.total = 0
+  } finally {
     loading.value = false
   }
 }
@@ -878,6 +1112,27 @@ onMounted(() => {
     gap: 12px;
     padding-top: 20px;
   }
+
+  .permissions-cell {
+    .permissions-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    
+    .permission-tag {
+      margin-right: 4px;
+      margin-bottom: 4px;
+      background-color: rgba(138, 95, 65, 0.08);
+      border-color: rgba(138, 95, 65, 0.2);
+      color: #8a5f41;
+    }
+    
+    .no-permissions {
+      color: #999;
+      font-size: 12px;
+    }
+  }
 }
 
 // 响应式调整
@@ -894,6 +1149,57 @@ onMounted(() => {
     .search-form {
       .el-form-item {
         width: 100%;
+      }
+    }
+  }
+}
+
+// 用户详情弹窗样式
+:deep(.user-detail-box) {
+  .el-message-box__content {
+    padding: 0;
+  }
+  
+  .el-message-box__message p {
+    margin: 0;
+  }
+}
+
+:deep(.user-detail-dialog) {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  
+  .avatar-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    
+    .user-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #f9f6f2;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  }
+  
+  .info-container {
+    .info-item {
+      display: flex;
+      margin-bottom: 12px;
+      
+      .label {
+        font-weight: 600;
+        color: #3d2c29;
+        width: 90px;
+        flex-shrink: 0;
+      }
+      
+      .permissions-list {
+        flex: 1;
+        color: #8a5f41;
       }
     }
   }
